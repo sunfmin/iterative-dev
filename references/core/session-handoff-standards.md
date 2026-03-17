@@ -73,7 +73,7 @@ grep -r "^<<<<<<< \|^=======$\|^>>>>>>> " --include="*.ts" --include="*.tsx" --i
 # No TODO without feature list item
 grep -rn "TODO\|FIXME" --exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=target --exclude-dir=__pycache__ -l
 
-# progress.txt exists and was recently updated
+# progress.txt exists (symlink to active scope) and was recently updated
 ls -la progress.txt
 tail -20 progress.txt
 ```

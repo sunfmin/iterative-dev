@@ -52,7 +52,7 @@ This skill provides a complete workflow for AI agents working on long-running de
 
 - `spec.md` — Project specification (symlink to active scope)
 - `feature_list.json` — Feature tracking with pass/fail status and project type
-- `progress.txt` — Session progress log
+- `progress.txt` — Session progress log (symlink to active scope)
 - `init.sh` — Development environment setup script
 
 ## How It Works (Claude Code)

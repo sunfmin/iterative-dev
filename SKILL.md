@@ -91,14 +91,16 @@ project-root/
 ├── specs/
 │   ├── auth/
 │   │   ├── spec.md
-│   │   └── feature_list.json
+│   │   ├── feature_list.json
+│   │   └── progress.txt
 │   └── video-editor/
 │       ├── spec.md
-│       └── feature_list.json
+│       ├── feature_list.json
+│       └── progress.txt
 ├── .active-scope
 ├── spec.md              # Symlink to active scope
-├── feature_list.json        # Symlink to active scope
-├── progress.txt
+├── feature_list.json    # Symlink to active scope
+├── progress.txt         # Symlink to active scope
 └── init.sh
 ```
 
@@ -121,6 +123,7 @@ project-root/
    echo "auth" > .active-scope
    ln -sf specs/auth/spec.md spec.md
    ln -sf specs/auth/feature_list.json feature_list.json
+   ln -sf specs/auth/progress.txt progress.txt
    ```
 
 4. **Determine project type** — detect or ask:
