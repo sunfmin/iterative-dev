@@ -43,7 +43,7 @@ test('user can login', async ({ page }) => {
 
   // Screenshot: Initial state
   await page.screenshot({
-    path: `e2e/screenshots/{scope}-feature-{id}-step1-login-initial.png`,
+    path: `e2e/screenshots/${scope}-feature-${id}-step1-login-initial.png`,
     fullPage: true
   });
 
@@ -55,7 +55,7 @@ test('user can login', async ({ page }) => {
 
   // Screenshot: After action
   await page.screenshot({
-    path: `e2e/screenshots/{scope}-feature-{id}-step2-dashboard-after-login.png`,
+    path: `e2e/screenshots/${scope}-feature-${id}-step2-dashboard-after-login.png`,
     fullPage: true
   });
 });

@@ -19,10 +19,5 @@
     "subagent",
     "autonomous"
   ],
-  "author": "",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": ""
-  }
+  "license": "MIT"
 }

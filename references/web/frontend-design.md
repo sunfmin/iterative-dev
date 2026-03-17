@@ -1,6 +1,6 @@
 # Frontend Design Principles
 
-> Adapted from the `/frontend-design` skill. These principles guide all UI implementation in iterative-web-dev projects.
+> Adapted from the `/frontend-design` skill. These principles guide all UI implementation across iterative-dev projects of all types.
 
 ## Core Philosophy
 

@@ -275,7 +275,7 @@ export default defineConfig({
 - Add `await page.waitForLoadState('networkidle')` before screenshot
 
 ### UI Looks Generic in Screenshots
-- Review references/frontend-design.md and references/ux-standards.md
+- Review references/web/frontend-design.md and references/web/ux-standards.md
 - Check for: distinctive typography, cohesive colors, proper shadows/depth
 - Verify loading/empty/error states are polished, not bare text
 - Add micro-interactions: hover transitions, focus effects
