@@ -33,7 +33,9 @@ If not running, start them with `bash init.sh`.
 
 ### Step 2: Write E2E Tests with Screenshots
 
-Every test MUST capture screenshots at key user journey points:
+Every test MUST capture screenshots at key user journey points.
+
+**Screenshot directory:** Screenshots are stored in `e2e/screenshots/` relative to the directory containing `playwright.config.ts`. In a monorepo with `frontend/`, this is `frontend/e2e/screenshots/`. In a standalone frontend project, this is `e2e/screenshots/` at the project root. The parent agent resolves this to an absolute path and passes it as `{screenshots_dir}` in the subagent prompt.
 
 ```typescript
 import { test, expect } from '@playwright/test';
@@ -42,6 +44,7 @@ test('user can login', async ({ page }) => {
   await page.goto('/login');
 
   // Screenshot: Initial state
+  // Path is relative to the Playwright project root (where playwright.config.ts lives)
   await page.screenshot({
     path: `e2e/screenshots/${scope}-feature-${id}-step1-login-initial.png`,
     fullPage: true
@@ -143,6 +146,7 @@ export default defineConfig({
 ## Parent Agent Post-Verification
 
 After subagent completes, parent MUST:
-1. Confirm screenshots exist: `ls e2e/screenshots/{scope}-feature-{id}-*.png 2>/dev/null | wc -l`
+1. Confirm screenshots exist: `ls {screenshots_dir}/{scope}-feature-{id}-*.png 2>/dev/null | wc -l`
+   (`{screenshots_dir}` = absolute path to `e2e/screenshots/` relative to `playwright.config.ts`)
 2. Spot-check one screenshot with the Read tool
 3. If quality is poor, launch a polish subagent

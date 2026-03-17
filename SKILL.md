@@ -212,6 +212,8 @@ Run FINAL STANDARDS AUDIT before ending session
 
 For each feature, use the **Agent tool** to launch a subagent. This keeps each feature's work isolated and prevents context window overflow.
 
+**IMPORTANT — Reference doc paths:** The `references/` directory lives inside this skill's install directory, NOT in the project. When building subagent prompts, you MUST resolve paths to absolute paths. Use: `{skill_base_dir}/references/...` where `{skill_base_dir}` is the "Base directory for this skill" shown at the top of this prompt. For example, if the skill base is `/Users/alice/.claude/skills/iterative-dev`, then the path is `/Users/alice/.claude/skills/iterative-dev/references/core/code-quality.md`.
+
 **Subagent prompt template:**
 
 ```
@@ -232,12 +234,12 @@ You are implementing a feature for a {type} project. Work autonomously — do NO
 
 ## Standards Documents
 Read these reference docs and follow them during implementation:
-- references/core/code-quality.md — Code organization, testability, unit testing rules
-- references/core/gitignore-standards.md — Files that must never be committed
-- references/verification/{type}-verification.md — Verification strategy for this project type
+- {skill_base_dir}/references/core/code-quality.md — Code organization, testability, unit testing rules
+- {skill_base_dir}/references/core/gitignore-standards.md — Files that must never be committed
+- {skill_base_dir}/references/verification/{type}-verification.md — Verification strategy for this project type
 {IF type == "web" or type == "mobile":}
-- references/web/ux-standards.md — UX quality requirements (loading/empty/error states, responsive, accessibility)
-- references/web/frontend-design.md — Visual design principles (typography, color, composition)
+- {skill_base_dir}/references/web/ux-standards.md — UX quality requirements (loading/empty/error states, responsive, accessibility)
+- {skill_base_dir}/references/web/frontend-design.md — Visual design principles (typography, color, composition)
 {END IF}
 
 ## Instructions
@@ -245,33 +247,70 @@ Read these reference docs and follow them during implementation:
 ### Phase 1: Implement
 1. Read the relevant source files to understand the current codebase
 2. Read the spec.md file for full project context
-3. Read the standards documents listed above
+3. Read the standards documents listed above (use the ABSOLUTE paths provided)
 4. Implement the feature following existing code patterns and the standards
 5. Make sure the implementation is complete and production-quality
 
 ### Phase 2: Refactor & Unit Test
-Follow references/core/code-quality.md:
+Follow {skill_base_dir}/references/core/code-quality.md:
 6. Extract pure functions out of components and handlers
 7. Move business logic into testable utility/service modules
 8. Eliminate duplication — reuse existing helpers or extract new shared ones
 9. Write unit tests for all extracted logic. Run them until green.
 
 ### Phase 3: Verification
-Follow references/verification/{type}-verification.md:
+Follow {skill_base_dir}/references/verification/{type}-verification.md:
 10. Execute the verification strategy defined for {type} projects
 11. Run all relevant tests — fix until green
 12. MANDATORY: Perform the verification checks specified in the doc
     Fix and re-run until all pass.
 
+{IF type == "web" or type == "mobile":}
+### Phase 3b: Screenshot Capture (NON-NEGOTIABLE for web/mobile)
+
+Screenshots are MANDATORY for every UI feature. They are the primary evidence of correct implementation and UI quality. A feature without screenshots is NOT verified.
+
+**Screenshot directory:** `{screenshots_dir}` (provided by parent agent — this is the absolute path to where screenshots are stored, e.g., `/path/to/project/frontend/e2e/screenshots` for a monorepo or `/path/to/project/e2e/screenshots` for a standalone frontend).
+
+13. Write or update a Playwright test file that captures screenshots at key states:
+    - Use `page.screenshot({ path: '{screenshots_dir}/{scope}-feature-{id}-step{N}-{description}.png', fullPage: true })`
+    - Capture BEFORE action, AFTER action, error states, and empty states
+    - Every test MUST have at least one `page.screenshot()` call
+
+14. Run the Playwright tests:
+    ```bash
+    npx playwright test
+    ```
+
+15. Verify screenshots were generated:
+    ```bash
+    ls {screenshots_dir}/{scope}-feature-{id}-*.png
+    ```
+    If no screenshots exist, the verification has FAILED. Fix and re-run.
+
+16. Use the Read tool to open and visually review EVERY screenshot. Check:
+    - Layout: content fits, no overflow/clipping, proper alignment
+    - Spacing: consistent padding/margins (4/8/16/24/32px scale)
+    - Visual hierarchy: important actions obvious, proper text size hierarchy
+    - States: loading skeleton/spinner, empty state (icon + message + CTA), error state
+    - Aesthetics: polished and intentional, cohesive colors, proper shadows/depth
+    - Data display: real data shown, numbers right-aligned in tables, status badges colored
+
+17. If screenshots reveal problems, fix the UI and re-capture until quality is acceptable.
+
+**Screenshot naming convention:** `{scope}-feature-{id}-step{N}-{description}.png`
+Examples: `pim-feature-9-step1-product-list.png`, `pim-feature-9-step2-empty-state.png`
+{END IF}
+
 ### Phase 4: Gitignore Review
-Follow references/core/gitignore-standards.md:
-13. Run `git status --short` and check every file against gitignore patterns
-14. Add any missing patterns to `.gitignore`, remove from tracking if needed
+Follow {skill_base_dir}/references/core/gitignore-standards.md:
+18. Run `git status --short` and check every file against gitignore patterns
+19. Add any missing patterns to `.gitignore`, remove from tracking if needed
 
 ### Phase 5: Commit
-15. Update feature_list.json — change "passes": false to "passes": true
-16. Update progress.txt with what was done and current feature pass count
-17. Commit all changes:
+20. Update feature_list.json — change "passes": false to "passes": true
+21. Update progress.txt with what was done and current feature pass count
+22. Commit all changes:
     git add -A && git commit -m "feat: [description] — Implemented feature #[id]: [description]"
 
 ## Key Rules
@@ -281,6 +320,10 @@ Follow references/core/gitignore-standards.md:
 - Make all decisions yourself, never ask for human input
 - EVERY feature must be verified per the verification strategy — no exceptions
 - BEFORE committing, review ALL files for .gitignore candidates
+{IF type == "web" or type == "mobile":}
+- SCREENSHOTS ARE NON-NEGOTIABLE — do not skip or defer them
+- If the app/server is not running for screenshots, start it (check init.sh or start manually)
+{END IF}
 ```
 
 **How to launch the subagent:**
@@ -299,16 +342,39 @@ The subagent handles implementation, testing, verification, and committing. The 
 
 1. **Confirm commit** — `git log --oneline -1`
 2. **Confirm feature_list.json** — feature has `"passes": true`
-3. **Verify output quality** — type-specific checks:
+3. **Verify output quality (NON-NEGOTIABLE GATE)** — type-specific checks. You MUST run these checks. Do NOT skip them even if the subagent reported success.
 
-   **For `web` and `mobile` projects:**
-   - VERIFY SCREENSHOTS EXIST:
-     ```bash
-     ls e2e/screenshots/{scope}-feature-{id}-*.png 2>/dev/null | wc -l
-     ```
-     If count is 0, launch a follow-up subagent to add screenshots and visual review.
-   - SPOT-CHECK one screenshot — Use the Read tool to open one screenshot. Evaluate against verification criteria.
-   - If quality is poor, launch a **polish subagent**.
+   **For `web` and `mobile` projects — SCREENSHOT GATE (NON-NEGOTIABLE):**
+
+   This gate MUST be executed for EVERY UI feature. It is the primary quality control for visual output. Skipping this gate means the feature is NOT verified.
+
+   **Determine `{screenshots_dir}`:** The screenshot directory depends on project structure:
+   - **Monorepo** (frontend in a subdirectory like `frontend/`): `{pwd}/frontend/e2e/screenshots`
+   - **Standalone frontend** (frontend at project root): `{pwd}/e2e/screenshots`
+   - Auto-detect: look for `playwright.config.ts` — screenshots live in `e2e/screenshots/` relative to that config file's directory.
+   - You MUST pass this resolved absolute path as `{screenshots_dir}` when building subagent prompts.
+
+   a. **CHECK screenshots exist:**
+      ```bash
+      ls {screenshots_dir}/{scope}-feature-{id}-*.png 2>/dev/null | wc -l
+      ```
+   b. **If count is 0: BLOCK.** The feature is NOT complete. Launch a follow-up subagent specifically to capture screenshots:
+      ```
+      Prompt: "You need to add screenshot capture for feature #{id} ({description}).
+      The feature is already implemented and committed. Your ONLY job is:
+      1. Start the dev server if not running (check with lsof, start with init.sh if needed)
+      2. Write/update a Playwright test that navigates to the feature and captures screenshots
+      3. Screenshots MUST be saved to: {screenshots_dir}/{scope}-feature-{id}-step{N}-{description}.png
+      4. Run the test: npx playwright test
+      5. Verify screenshots exist: ls {screenshots_dir}/{scope}-feature-{id}-*.png
+      6. Use the Read tool to visually review each screenshot
+      7. Commit the screenshots and test file"
+      ```
+   c. **If count > 0: SPOT-CHECK.** Use the Read tool to open one screenshot. Evaluate:
+      - Layout correct? Content fits, no overflow?
+      - Real data shown, not empty/broken?
+      - Polished appearance, not prototype-level?
+      - If quality is poor, launch a **polish subagent** to fix UI issues and recapture.
 
    **For `api` projects:**
    - Verify integration tests exist and pass
@@ -419,9 +485,18 @@ Before ending:
 ## Critical Rules
 
 ### Standards Enforcement
-- All quality standards live in `references/` docs — subagents MUST read them
+- All quality standards live in `references/` docs within this skill's base directory — subagents MUST read them using absolute paths
+- **CRITICAL**: Reference doc paths are relative to THIS SKILL's install directory (shown as "Base directory for this skill" at the top of this prompt), NOT the project working directory. Always resolve to absolute paths before passing to subagents.
 - Standards are verified both during implementation (by subagent) AND periodically (by audit)
 - Audit violations MUST be fixed before session ends
+
+### Screenshot Enforcement (web/mobile projects — NON-NEGOTIABLE)
+- Every UI feature MUST have screenshots in `{screenshots_dir}/{scope}-feature-{id}-*.png`
+- `{screenshots_dir}` is determined by project structure: `{pwd}/frontend/e2e/screenshots` for monorepos, `{pwd}/e2e/screenshots` for standalone frontends. Auto-detect by finding `playwright.config.ts`.
+- The parent agent MUST check for screenshots after EVERY subagent that implements a UI feature
+- If screenshots are missing, the parent MUST launch a follow-up subagent — the feature is NOT done
+- Screenshots are the primary evidence of UI quality — without them, visual bugs go undetected
+- The subagent prompt template includes inlined screenshot instructions so subagents know what to do without needing to find external docs
 
 ### Autonomous Operation (NON-NEGOTIABLE)
 - NEVER stop to ask the human a question

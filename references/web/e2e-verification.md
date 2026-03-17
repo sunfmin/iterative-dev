@@ -4,6 +4,19 @@ Verify features work correctly using Playwright E2E tests with screenshot captur
 
 **CRITICAL: Screenshots are MANDATORY for every feature. They are the primary evidence of correct implementation and UI quality. Skipping screenshots means the feature is NOT verified.**
 
+## Screenshot Directory
+
+Screenshots are stored in `e2e/screenshots/` **relative to the directory containing `playwright.config.ts`**. This varies by project structure:
+
+| Project Structure | `playwright.config.ts` location | Screenshot directory |
+|---|---|---|
+| Monorepo (`frontend/` subdir) | `frontend/playwright.config.ts` | `frontend/e2e/screenshots/` |
+| Standalone frontend (root) | `playwright.config.ts` | `e2e/screenshots/` |
+
+In Playwright test code, always use the **relative** path `e2e/screenshots/...` — Playwright resolves it from its config directory.
+
+For parent agent verification, resolve to an **absolute** path: find `playwright.config.ts`, then append `e2e/screenshots/`.
+
 ## Prerequisites
 
 Ensure Playwright is set up:
@@ -26,7 +39,10 @@ If not running, start them with `bash init.sh`.
 
 ### Step 2: Clear Old Screenshots
 
+The screenshot directory is `e2e/screenshots/` relative to the directory containing `playwright.config.ts`. In a monorepo (e.g., `frontend/`), run commands from that subdirectory. In a standalone project, run from the project root.
+
 ```bash
+# Run from the directory containing playwright.config.ts
 rm -rf e2e/screenshots/*.png e2e/screenshots/**/*.png 2>/dev/null || true
 rm -rf test-results/**/*.png 2>/dev/null || true
 ```
