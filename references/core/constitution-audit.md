@@ -88,9 +88,10 @@ Output format:
 
 Group related violations into features. Each feature should:
 - Fix ONE specific pattern or concern (not mix unrelated changes)
-- Have concrete, verifiable test steps
+- Have concrete, verifiable test steps **included in the feature itself** (NOT as separate testing features)
 - Include the exact constitution rule being addressed
 - Be ordered: dependencies first (e.g., fix types before fixing code that uses those types)
+- **NEVER create standalone "testing" or "verification" features** — each feature's `steps` must include both the fix AND the tests that verify it. A feature is not done until it is verified within its own steps.
 
 ### Key Principles
 

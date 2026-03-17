@@ -70,9 +70,37 @@ You may use any category that makes sense for the project.
 - Remove or edit test steps
 - Weaken or delete tests
 - Change a passing feature back to failing (unless genuine regression)
+- **Create separate "testing" or "verification" features** — testing and verification MUST be embedded as steps within the feature they verify (see Self-Contained Features rule below)
 
 **ONLY:**
 - Change `"passes": false` to `"passes": true` after thorough verification
+
+## Self-Contained Features (NON-NEGOTIABLE)
+
+Every feature MUST be independently verifiable. This means:
+
+1. **Each feature includes its own test/verification steps** — the `steps` array MUST contain steps that implement the feature AND steps that verify it (run tests, check types, validate behavior)
+2. **NO separate "testing" or "verification" features** — never create features like "Write integration tests for X" or "Add E2E tests for all pages" as standalone features. Tests are part of the feature they test.
+3. **NO deferred testing** — do not push testing to the end of the feature list. When a feature is marked `"passes": true`, it means the feature is implemented AND tested AND verified.
+4. **A feature is not done until it is verified** — the subagent implementing each feature runs the verification strategy for the project type (see `references/verification/`) as part of that feature's implementation.
+
+**Why:** When testing is a separate feature at the end, it creates a false sense of progress — features appear "done" but are unverified. It also makes the test-writing disconnected from the implementation context. Each feature must stand on its own: implemented, tested, and verified before moving on.
+
+**Anti-pattern (WRONG):**
+```json
+{"id": 5, "description": "Product CRUD backend service", "steps": ["Implement create", "Implement list", "Implement update", "Implement delete"]},
+{"id": 13, "description": "Backend integration tests for all services", "steps": ["Write tests for categories", "Write tests for products", "Run full suite"]}
+```
+
+**Correct pattern:**
+```json
+{"id": 5, "description": "Product CRUD backend service", "steps": [
+  "Implement ProductService with Create, List, GetByID, Update, Delete",
+  "Write integration tests: create product, verify response matches fixture",
+  "Write integration tests: list with pagination, filter by category/status",
+  "Write integration tests: update product, delete product, duplicate SKU rejection",
+  "Run go test -v -race ./tests/ and verify all pass"
+]}
 
 ## Priority Order
 
@@ -120,7 +148,9 @@ Every feature's test steps should be concrete and verifiable. The steps depend o
 
 ## Examples
 
-### Web Project
+Note: Every example below shows features that are **self-contained** — each feature includes implementation AND test/verification steps. There are no separate "write tests" features.
+
+### Web Project (Full-Stack)
 ```json
 {
   "type": "web",
@@ -129,14 +159,18 @@ Every feature's test steps should be concrete and verifiable. The steps depend o
       "id": 1,
       "category": "functional",
       "priority": "high",
-      "description": "User can register with email and password",
+      "description": "User registration with email and password",
       "steps": [
-        "Step 1: Navigate to /register",
-        "Step 2: Verify registration form loads with proper layout",
-        "Step 3: Submit empty form and verify inline validation errors",
-        "Step 4: Fill in email and password fields",
-        "Step 5: Click Register and verify loading state on button",
-        "Step 6: Verify redirect to dashboard"
+        "Implement registration API endpoint (POST /api/register)",
+        "Write backend integration test: valid registration returns 201 with user object",
+        "Write backend integration test: duplicate email returns 409",
+        "Write backend integration test: missing fields return 400 with validation errors",
+        "Run go test -v -race ./tests/ and verify backend tests pass",
+        "Implement registration form UI with React Hook Form + Zod validation",
+        "Handle loading, error, and success states in the form",
+        "Write E2E test: navigate to /register, submit empty form, verify inline validation errors",
+        "Write E2E test: fill valid data, submit, verify redirect to dashboard",
+        "Run pnpm tsc --noEmit and pnpm test, verify all pass"
       ],
       "passes": false
     }
@@ -155,11 +189,12 @@ Every feature's test steps should be concrete and verifiable. The steps depend o
       "priority": "high",
       "description": "Create product endpoint",
       "steps": [
-        "Step 1: POST /api/products with valid body returns 201",
-        "Step 2: Response contains id, name, price, created_at",
-        "Step 3: POST with missing required field returns 400 with field error",
-        "Step 4: POST with invalid price returns 400 with validation error",
-        "Step 5: GET /api/products/{id} returns the created product"
+        "Implement POST /api/products handler with validation",
+        "Write integration test: POST with valid body returns 201 with id, name, price, created_at",
+        "Write integration test: POST with missing required field returns 400 with field error",
+        "Write integration test: POST with invalid price returns 400 with validation error",
+        "Write integration test: GET /api/products/{id} returns the created product",
+        "Run go test -v -race ./tests/ and verify all pass"
       ],
       "passes": false
     }
@@ -178,11 +213,12 @@ Every feature's test steps should be concrete and verifiable. The steps depend o
       "priority": "high",
       "description": "Init command creates project structure",
       "steps": [
-        "Step 1: Run `mytool init myproject` in empty directory",
-        "Step 2: Verify directory structure created (src/, tests/, config/)",
-        "Step 3: Verify config file has correct defaults",
-        "Step 4: Run `mytool init` without name and verify error message",
-        "Step 5: Run `mytool init myproject` again and verify idempotent behavior"
+        "Implement init command with directory creation and config generation",
+        "Write test: `mytool init myproject` in empty directory creates src/, tests/, config/",
+        "Write test: verify config file has correct defaults",
+        "Write test: `mytool init` without name shows error message with usage hint",
+        "Write test: `mytool init myproject` again is idempotent (no error, no overwrite)",
+        "Run all tests and verify they pass"
       ],
       "passes": false
     }
@@ -201,11 +237,13 @@ Every feature's test steps should be concrete and verifiable. The steps depend o
       "priority": "high",
       "description": "Parse function handles all input formats",
       "steps": [
-        "Step 1: parse('simple string') returns correct AST node",
-        "Step 2: parse('nested {value}') handles interpolation",
-        "Step 3: parse('') returns descriptive error",
-        "Step 4: parse(null) returns descriptive error without panic",
-        "Step 5: Verify Parse is exported in public API"
+        "Implement parse() function for string, interpolation, and edge case inputs",
+        "Write unit test: parse('simple string') returns correct AST node",
+        "Write unit test: parse('nested {value}') handles interpolation",
+        "Write unit test: parse('') returns descriptive error",
+        "Write unit test: parse(null) returns descriptive error without panic",
+        "Verify Parse is exported in public API",
+        "Run all tests and verify they pass"
       ],
       "passes": false
     }

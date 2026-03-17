@@ -150,6 +150,9 @@ project-root/
 
    **Important:** Include the `"type"` field in feature_list.json (see feature-list-format.md).
 
+   **CRITICAL — Self-Contained Features (NON-NEGOTIABLE):**
+   Every feature MUST include its own test and verification steps. NEVER create separate "testing" or "verification" features (e.g., "Write integration tests", "Add E2E tests for all pages"). Each feature's `steps` array must contain both implementation AND verification steps so the feature can be independently verified when completed. See `references/core/feature-list-format.md` for the "Self-Contained Features" rule and examples.
+
 6. **Create/update init.sh** — see `references/core/init-script-template.md`
 
 7. **Commit and update progress log**
