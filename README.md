@@ -5,7 +5,7 @@ An AI skill for iterative development with AI agents. Works with **any project t
 ## Installation
 
 ```bash
-npx skills add https://github.com/sunfmin/iterative-web-dev
+npx skills add https://github.com/theplant/iterative-dev
 ```
 
 ## Overview
@@ -62,6 +62,122 @@ This skill provides a complete workflow for AI agents working on long-running de
 3. Subagent implements the feature, runs type-appropriate verification, and commits
 4. Parent agent confirms completion, then **loops back** to pick the next feature
 5. Only stops when ALL features have `"passes": true`
+
+## How to Use
+
+### Case 1: Write spec.md yourself, then initialize
+
+Best when you have a clear vision of what to build. Write the spec first, then let the agent set up the scope and generate the feature list.
+
+**Step 1 — Write your spec:**
+
+Create `specs/auth/spec.md` (or any scope name) with your project specification:
+
+```markdown
+# Auth System
+
+Build a JWT-based authentication system with:
+- User registration with email/password
+- Login endpoint returning JWT tokens
+- Password reset via email
+- Role-based access control (admin, user)
+- Rate limiting on auth endpoints
+```
+
+**Step 2 — Initialize the scope:**
+
+```
+> Initialize scope "auth" using the spec I wrote in specs/auth/spec.md
+```
+
+The agent will read your spec, detect the project type, generate `feature_list.json`, create `init.sh`, and commit.
+
+**Step 3 — Continue (every subsequent session):**
+
+```
+> Continue working
+```
+
+The agent picks up where it left off and implements all remaining features autonomously.
+
+---
+
+### Case 2: Describe what you want, let the agent generate spec.md
+
+Best for brainstorming or when you want the agent to help shape the spec. Just describe your idea in the prompt.
+
+```
+> Initialize a new scope called "dashboard". I want a real-time analytics dashboard
+> with charts for user signups, revenue, and API usage. It should have date range
+> filters, CSV export, and a dark mode toggle. Use React + Recharts.
+```
+
+The agent will:
+1. Create `specs/dashboard/spec.md` from your description
+2. Detect project type (web)
+3. Generate `feature_list.json` with prioritized features
+4. Create `init.sh` with the right dev environment setup
+5. Commit everything
+
+Then continue in subsequent sessions:
+
+```
+> Continue working
+```
+
+---
+
+### Case 3: Switch between existing scopes
+
+When you have multiple scopes and want to switch context:
+
+```
+> Switch to scope "video-editor"
+```
+
+The agent updates `.active-scope` and symlinks `spec.md` / `feature_list.json` to the selected scope.
+
+---
+
+### Case 4: Compliance / standards alignment scope
+
+When your scope is about aligning code with a reference document (not building new features):
+
+```
+> Initialize a new scope called "standards-alignment" to align our codebase
+> with the requirements in AGENTS.md
+```
+
+The agent uses the **Constitution Audit Workflow** — it systematically extracts every requirement from the reference document, verifies each against your code, and generates features only from verified violations.
+
+---
+
+### Case 5: Continue a multi-session project
+
+Every session after the first, just say:
+
+```
+> Continue working
+> Pick up where I left off
+> Next feature
+```
+
+The agent reads `feature_list.json` and `progress.txt`, runs regression tests, then implements all remaining features in a loop — committing after each one. It won't stop until everything passes.
+
+---
+
+### Typical workflow timeline
+
+```
+Session 1:  "Initialize scope 'my-app' — here's what I want to build: ..."
+            → Agent creates spec.md, feature_list.json, init.sh
+
+Session 2:  "Continue working"
+            → Agent implements features #1–#5, commits each
+
+Session 3:  "Continue working"
+            → Agent implements features #6–#12, all pass, scope complete
+```
 
 ## Project Structure
 
