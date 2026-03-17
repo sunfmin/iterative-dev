@@ -1,0 +1,23 @@
+{
+  "name": "iterative-dev",
+  "version": "2.0.0",
+  "description": "Iterative development workflow for AI agents with incremental progress, scoped features, and type-aware verification. Supports web, API, CLI, library, data pipeline, and mobile projects.",
+  "keywords": [
+    "windsurf",
+    "claude-code",
+    "skill",
+    "ai-agent",
+    "development",
+    "web-development",
+    "api",
+    "cli",
+    "library",
+    "data-pipeline",
+    "mobile",
+    "e2e-testing",
+    "incremental-development",
+    "subagent",
+    "autonomous"
+  ],
+  "license": "MIT"
+}
