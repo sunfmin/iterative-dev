@@ -7,10 +7,12 @@ Verify web features using Playwright E2E tests with screenshot capture and visua
 ## Overview
 
 Web projects are verified through:
-1. **E2E tests** — Playwright tests exercising user journeys
+1. **Interaction tests** — Playwright tests that **perform user actions** (click, fill, submit, navigate) and verify outcomes — this is the PRIMARY verification that features actually work
 2. **Screenshots** — Captured at key states for visual review
 3. **Visual review** — AI agent reviews every screenshot against quality criteria
 4. **UX standards compliance** — Loading/empty/error states, responsive, accessible
+
+**CRITICAL DISTINCTION:** Screenshots verify APPEARANCE. Interaction tests verify BEHAVIOR. Both are required, but interaction tests are MORE important — a feature that looks perfect but doesn't work is worse than a feature that looks rough but works correctly.
 
 ## Prerequisites
 
@@ -31,9 +33,61 @@ lsof -i :8082 | head -2  # Backend
 
 If not running, start them with `bash init.sh`.
 
-### Step 2: Write E2E Tests with Screenshots
+### Step 2: Write Tests That Prove the Outcome Works (PRIMARY VERIFICATION)
 
-Every test MUST capture screenshots at key user journey points.
+Every feature MUST have Playwright tests that **perform the actions a user would perform** and **verify the results the user would expect**. This is the primary verification — it proves the feature actually works, not just that it renders.
+
+**The universal principle:** Ask "what can the user DO when this feature is done?" Then write a test that does exactly that and checks the result.
+
+Tests MUST:
+- **Perform real user actions** — click buttons, fill forms, navigate links, select options
+- **Verify observable outcomes** — text appears, page navigates, data changes, notifications show
+- **Cover the complete flow** — not just "page loads" but "user completes the task from start to finish"
+
+Tests MUST NOT:
+- Only navigate to a page and take a screenshot (proves rendering, not behavior)
+- Only check that a component exists without interacting with it
+- Skip verifying the result of an action (e.g., submit a form but don't check if data was saved)
+
+```typescript
+// CORRECT: Test proves the user can complete the task
+test('user can edit a product', async ({ page, request }) => {
+  // Setup: seed data via API
+  const res = await request.post('/api/v1/products', { data: { name: 'Original', sku: 'TEST-001', price: 10 } });
+  const product = (await res.json()).data;
+
+  // Act: perform the user journey
+  await page.goto('/products');
+  await page.getByRole('button', { name: `Actions for Original` }).click();
+  await page.getByRole('menuitem', { name: 'Edit' }).click();
+  await expect(page.getByLabel('Name')).toHaveValue('Original');
+  await page.getByLabel('Name').fill('Updated Name');
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  // Assert: verify the outcome
+  await expect(page).toHaveURL('/products');
+  await expect(page.getByText('Updated Name')).toBeVisible();
+});
+
+// WRONG: Only proves the page renders, not that any feature works
+test('products page', async ({ page }) => {
+  await page.goto('/products');
+  await page.screenshot({ path: 'screenshot.png', fullPage: true });
+  // Edit could be broken, Delete could crash, Filters could be no-ops
+});
+```
+
+This principle applies beyond CRUD. For any feature:
+- **Search/filter:** Type a query → verify results change → clear → verify results reset
+- **Navigation:** Click a link → verify destination page loads with correct content
+- **Settings:** Change a setting → verify the change takes effect → reload → verify it persisted
+- **Workflow:** Start a process → advance through steps → verify completion state
+- **Upload:** Select file → upload → verify file appears in list
+- **Auth:** Login → verify access to protected page → logout → verify redirect to login
+
+### Step 3: Capture Screenshots at Key States
+
+In addition to interaction tests, capture screenshots for visual review.
 
 **Screenshot directory:** Screenshots are stored in `e2e/screenshots/` relative to the directory containing `playwright.config.ts`. In a monorepo with `frontend/`, this is `frontend/e2e/screenshots/`. In a standalone frontend project, this is `e2e/screenshots/` at the project root. The parent agent resolves this to an absolute path and passes it as `{screenshots_dir}` in the subagent prompt.
 
@@ -221,8 +275,9 @@ The integration smoke test FAILS if any of these are true:
 ## Parent Agent Post-Verification
 
 After subagent completes, parent MUST:
-1. Confirm screenshots exist: `ls {screenshots_dir}/{scope}-feature-{id}-*.png 2>/dev/null | wc -l`
+1. **Confirm interaction tests exist and pass** — for CRUD features, check that the subagent wrote tests that exercise user flows (create, edit, delete), not just screenshot-only tests. If tests only take screenshots without clicking/submitting, the feature is NOT verified.
+2. Confirm screenshots exist: `ls {screenshots_dir}/{scope}-feature-{id}-*.png 2>/dev/null | wc -l`
    (`{screenshots_dir}` = absolute path to `e2e/screenshots/` relative to `playwright.config.ts`)
-2. Spot-check one screenshot with the Read tool
-3. If quality is poor, launch a polish subagent
-4. **For full-stack features**: verify screenshots show **real data**, not loading skeletons or empty states. If data is missing, run the integration smoke test above to diagnose.
+3. Spot-check one screenshot with the Read tool — verify it shows **real data and completed states** (e.g., edit form with pre-filled data, not just an empty form)
+4. If quality is poor, launch a polish subagent
+5. **For full-stack features**: verify screenshots show **real data**, not loading skeletons or empty states. If data is missing, run the integration smoke test above to diagnose.

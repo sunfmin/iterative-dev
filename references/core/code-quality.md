@@ -37,7 +37,7 @@ Every feature implementation must meet these standards. Code that works but is m
 - Keep functions small and single-purpose
 - Name things clearly — intent over implementation
 - Prefer composition over deep nesting
-- Use `data-testid` attributes for E2E test selectors
+- Use stable test selectors appropriate to your project type (e.g., `data-testid` for web, accessibility identifiers for mobile, named exports for libraries)
 
 ## What NOT to Do
 

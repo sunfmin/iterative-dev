@@ -1,8 +1,10 @@
 # E2E Screenshot Verification — Full Details
 
+> **Subagent reference:** This file is inlined in subagent prompts for quick reference on screenshot mechanics. For the FULL verification process (including interaction tests), see `references/verification/web-verification.md`.
+
 Verify features work correctly using Playwright E2E tests with screenshot capture and visual review.
 
-**CRITICAL: Screenshots are MANDATORY for every feature. They are the primary evidence of correct implementation and UI quality. Skipping screenshots means the feature is NOT verified.**
+**Interaction tests that prove user outcomes are the PRIMARY verification.** Tests must perform real user actions (click, fill, submit, navigate) and verify observable results (data appears, page navigates, state changes). Screenshots are SECONDARY — they verify visual quality and catch layout/styling issues that interaction tests cannot detect. Both are required, but a feature that passes interaction tests with rough visuals is closer to done than one with perfect screenshots but broken behavior.
 
 ## Screenshot Directory
 
@@ -264,7 +266,7 @@ export default defineConfig({
 - AI agents need to review UI for UX issues, not just failures
 - Success screenshots enable visual regression detection
 - Human reviewers can audit AI's work quality
-- Screenshots are the primary evidence of correct implementation
+- Screenshots supplement interaction tests by catching visual regressions
 
 **Why short timeouts:**
 - Long waits waste tokens and time

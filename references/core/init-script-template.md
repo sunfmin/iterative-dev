@@ -63,13 +63,15 @@ cd ..
 # 8. Wait and verify
 sleep 3
 
-# 9. Verify backend API and CORS (for full-stack projects)
+# 9. Verify cross-component connectivity (for full-stack projects)
+# Adapt the URL and port to match your project's API prefix and backend port
 echo "Verifying backend API..."
-API_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/api/v1/ 2>/dev/null || echo "000")
+API_URL="http://localhost:8082"  # adjust to your backend URL and API prefix
+API_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/" 2>/dev/null || echo "000")
 if [ "$API_RESPONSE" = "404" ]; then
-  echo "⚠️  WARNING: Backend returns 404 for /api/v1/ — route prefix may be misconfigured"
+  echo "⚠️  WARNING: Backend returns 404 — route prefix may be misconfigured"
 fi
-CORS_HEADER=$(curl -s -I -X OPTIONS http://localhost:8082/api/v1/ -H 'Origin: http://localhost:3000' 2>/dev/null | grep -i 'access-control-allow-origin' || echo "")
+CORS_HEADER=$(curl -s -I -X OPTIONS "$API_URL/" -H 'Origin: http://localhost:3000' 2>/dev/null | grep -i 'access-control-allow-origin' || echo "")
 if [ -z "$CORS_HEADER" ]; then
   echo "⚠️  WARNING: No CORS headers detected — frontend requests will be blocked by browser"
 fi
@@ -262,21 +264,24 @@ curl -s http://localhost:8080/health || echo "Server not responding"
 ./bin/mytool --version 2>/dev/null || echo "CLI not built"
 ```
 
-## Web Project: CORS and Route Prefix Verification (IMPORTANT)
+## Cross-Component Connectivity Verification (IMPORTANT)
 
-For full-stack web projects where the frontend and backend run on different ports, **always verify CORS and route prefixes** after starting services. These are the #1 and #2 most common causes of "frontend can't load data" bugs.
+For projects where components run on different ports or domains (e.g., frontend + backend, microservices, API gateway + services), **always verify cross-component connectivity** after starting services. The most common failures are:
+- **Requests blocked by CORS** — browsers enforce cross-origin restrictions that tools like `curl` bypass
+- **Routes not matching between client and server** — route prefixes, path mismatches, or code generators omitting URL prefixes
+- **Auth tokens not forwarded** — credentials or headers dropped between components
+
+Verify connectivity by testing the actual paths your components use to communicate. For example, in a web project with a frontend on port 3000 and backend on port 8080:
 
 ```bash
-# 1. Verify backend API responds (not 404)
-# If using an API prefix like /api/v1, test the full path:
+# Example: Verify backend API responds at the path the frontend expects
 curl -s http://localhost:8080/api/v1/health || curl -s http://localhost:8080/api/v1/<any-list-endpoint> | head -3
-# If 404: the backend route registration doesn't include the prefix.
-# Common with code generators (ogen, openapi-generator) that register routes
-# without the OpenAPI servers.url prefix. Fix by mounting under the prefix.
+# If 404: the route prefix may be misconfigured between client and server.
 
-# 2. Verify CORS headers are set
+# Example: Verify CORS headers are present (web projects only)
 curl -s -I -X OPTIONS http://localhost:8080/api/v1/<any-endpoint> \
   -H 'Origin: http://localhost:3000' | grep -i 'access-control'
 # If no Access-Control-Allow-Origin header: add CORS middleware to the backend.
-# Without CORS headers, browsers block all requests from the frontend.
 ```
+
+Adapt these checks to your project's architecture — the principle is the same regardless of language or framework: verify that each component can reach the others at the expected paths with the expected headers.

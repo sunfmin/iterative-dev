@@ -126,13 +126,9 @@ project-root/
    ln -sf specs/auth/progress.txt progress.txt
    ```
 
-4. **Determine project type** — detect or ask:
-   - Look at the codebase: Does it have a `src/` with React/Vue/Svelte? → `web`
-   - Is it a REST/GraphQL API with no frontend? → `api`
-   - Does it have a `main` with CLI arg parsing (cobra, clap, argparse, commander)? → `cli`
-   - Is it a package/module with no main entry point? → `library`
-   - Does it have ETL/pipeline code (pandas, spark, dbt, airflow)? → `data`
-   - Does it have React Native, Flutter, SwiftUI, or Kotlin/Android? → `mobile`
+4. **Determine project type** — based on how users interact with the deliverable:
+   - What does the user interact with? **Browser** → `web`. **Terminal** → `cli`. **Import/call** → `library`. **HTTP requests** → `api`. **Phone/tablet** → `mobile`. **Data outputs** → `data`.
+   - Confirm by examining the codebase structure (e.g., frontend frameworks suggest `web`, CLI entry points suggest `cli`, no main entry point suggests `library`)
    - If unclear, default to the most fitting type based on spec.md
 
 5. **Create feature list** — choose the right method:
@@ -153,15 +149,18 @@ project-root/
    **CRITICAL — Self-Contained Features (NON-NEGOTIABLE):**
    Every feature MUST include its own test and verification steps. NEVER create separate "testing" or "verification" features (e.g., "Write integration tests", "Add E2E tests for all pages"). Each feature's `steps` array must contain both implementation AND verification steps so the feature can be independently verified when completed. See `references/core/feature-list-format.md` for the "Self-Contained Features" rule and examples.
 
-   **CRITICAL — Screenshot & Visual Review Steps for UI Features (web/mobile — NON-NEGOTIABLE):**
-   For `web` and `mobile` project types, every feature that produces or modifies UI MUST include **screenshot capture and visual review** steps in its `steps` array. These are NOT optional and MUST NOT be deferred to a separate feature. A UI feature without screenshot steps will be implemented without visual verification, which defeats the purpose of the screenshot gate.
+   **CRITICAL — Verification Steps for UI Features (web/mobile — NON-NEGOTIABLE):**
+   For `web` and `mobile` project types, every feature that produces or modifies UI MUST include **interaction test and screenshot** steps in its `steps` array. These are NOT optional and MUST NOT be deferred to a separate feature.
+
+   **Outcome-proving tests (interaction, integration, unit) are the PRIMARY verification.** Tests must perform real user actions and verify observable outcomes — they prove the feature actually works. **Screenshots are SECONDARY** — they verify visual quality and catch layout/styling issues that interaction tests cannot detect. Both are required.
 
    Every UI feature's `steps` array MUST end with these steps (adapted to the feature):
    ```
-   "Capture screenshots: write/update Playwright test that takes fullPage screenshots at key states (list view, empty state, form, after action)",
-   "Run Playwright tests and verify screenshots are generated in e2e/screenshots/",
+   "Write interaction tests: Playwright tests that perform user actions (click, fill, submit, navigate) and verify outcomes (data appears, page navigates, state changes)",
+   "Capture screenshots: add fullPage screenshots at key states (list view, empty state, form, after action)",
+   "Run Playwright tests and verify all pass and screenshots are generated in e2e/screenshots/",
    "Visually review each screenshot: verify layout, spacing, hierarchy, loading/empty/error states, data display, and overall polish",
-   "Fix any visual issues found and re-capture until quality is acceptable"
+   "Fix any issues found (broken behavior or visual problems) and re-run until quality is acceptable"
    ```
 
    **How to determine if a feature is a UI feature:** If the feature creates or modifies files in `src/routes/`, `src/components/`, `src/features/`, or any file that renders user-visible HTML/JSX, it is a UI feature and MUST have screenshot steps. Backend-only features (services, models, API endpoints without frontend) do NOT need screenshot steps.
@@ -284,7 +283,7 @@ Follow {skill_base_dir}/references/verification/{type}-verification.md:
 {IF type == "web" or type == "mobile":}
 ### Phase 3b: Screenshot Capture (NON-NEGOTIABLE for web/mobile)
 
-Screenshots are MANDATORY for every UI feature. They are the primary evidence of correct implementation and UI quality. A feature without screenshots is NOT verified.
+Interaction tests (Phase 3) are the PRIMARY verification that features work. Screenshots are SECONDARY but MANDATORY — they verify visual quality and catch layout/styling issues that interaction tests cannot detect. A feature without both interaction tests and screenshots is NOT fully verified.
 
 **Screenshot directory:** `{screenshots_dir}` (provided by parent agent — this is the absolute path to where screenshots are stored, e.g., `/path/to/project/frontend/e2e/screenshots` for a monorepo or `/path/to/project/e2e/screenshots` for a standalone frontend).
 
@@ -401,6 +400,7 @@ The subagent handles implementation, testing, verification, and committing. The 
       - Real data shown, not empty/broken?
       - Polished appearance, not prototype-level?
       - If quality is poor, launch a **polish subagent** to fix UI issues and recapture.
+   d. **OUTCOME VERIFICATION CHECK:** Verify the subagent wrote tests that **prove the feature works from the user's perspective** — not just screenshot-only tests. Tests must perform user actions (click, fill, submit, navigate) and verify outcomes (data appears, page navigates, state changes). If the feature has interactive elements and the only tests are screenshots, the feature is NOT verified. Launch a follow-up subagent to add interaction tests. See `references/verification/web-verification.md` Step 2.
 
    **For `web` full-stack projects — INTEGRATION SMOKE TEST GATE (NON-NEGOTIABLE):**
 
@@ -543,13 +543,13 @@ Before ending:
 - Standards are verified both during implementation (by subagent) AND periodically (by audit)
 - Audit violations MUST be fixed before session ends
 
-### Screenshot Enforcement (web/mobile projects — NON-NEGOTIABLE)
-- Every UI feature MUST have screenshots in `{screenshots_dir}/{scope}-feature-{id}-*.png`
+### Verification Enforcement (web/mobile projects — NON-NEGOTIABLE)
+- **Interaction tests proving user outcomes are PRIMARY verification** — every UI feature MUST have tests that perform user actions and verify results
+- Every UI feature MUST also have screenshots in `{screenshots_dir}/{scope}-feature-{id}-*.png` — screenshots are SECONDARY for visual quality
 - `{screenshots_dir}` is determined by project structure: `{pwd}/frontend/e2e/screenshots` for monorepos, `{pwd}/e2e/screenshots` for standalone frontends. Auto-detect by finding `playwright.config.ts`.
-- The parent agent MUST check for screenshots after EVERY subagent that implements a UI feature
-- If screenshots are missing, the parent MUST launch a follow-up subagent — the feature is NOT done
-- Screenshots are the primary evidence of UI quality — without them, visual bugs go undetected
-- The subagent prompt template includes inlined screenshot instructions so subagents know what to do without needing to find external docs
+- The parent agent MUST check for both interaction tests AND screenshots after EVERY subagent that implements a UI feature
+- If either is missing, the parent MUST launch a follow-up subagent — the feature is NOT done
+- The subagent prompt template includes inlined verification instructions so subagents know what to do without needing to find external docs
 
 ### Autonomous Operation (NON-NEGOTIABLE)
 - NEVER stop to ask the human a question

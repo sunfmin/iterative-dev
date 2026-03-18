@@ -41,10 +41,10 @@ Every feature implemented by a subagent must meet these standards. A feature tha
 ## Visual Design Standards
 
 ### Typography Hierarchy
-- Page title: `text-2xl font-bold` or larger
-- Section title: `text-lg font-semibold`
-- Body text: `text-sm` or `text-base`
-- Caption/label: `text-xs text-muted-foreground`
+- Page title: large and bold (e.g., 24px+ bold)
+- Section title: medium and semi-bold (e.g., 18px semi-bold)
+- Body text: standard size (e.g., 14-16px)
+- Caption/label: small and muted (e.g., 12px, secondary color)
 - Choose distinctive fonts — avoid generic defaults like Inter, Arial, system-ui
 - Pair a display font with a complementary body font
 
@@ -57,22 +57,22 @@ Every feature implemented by a subagent must meet these standards. A feature tha
 
 ### Spacing Scale
 Use a consistent scale throughout the app:
-- `4px` (p-1) — tight inline spacing
-- `8px` (p-2) — compact elements
-- `12px` (p-3) — standard inline padding
-- `16px` (p-4) — standard section padding
-- `24px` (p-6) — generous section spacing
-- `32px` (p-8) — major section breaks
-- `48px` (p-12) — page-level spacing
+- `4px` — tight inline spacing
+- `8px` — compact elements
+- `12px` — standard inline padding
+- `16px` — standard section padding
+- `24px` — generous section spacing
+- `32px` — major section breaks
+- `48px` — page-level spacing
 
 ### Shadows & Depth
-- Cards: `shadow-sm` at rest, `shadow-md` on hover
-- Modals/dialogs: `shadow-lg`
-- Dropdowns: `shadow-md`
-- Always add transition: `transition-shadow duration-200`
+- Cards: subtle shadow at rest, slightly deeper on hover
+- Modals/dialogs: prominent shadow for depth
+- Dropdowns: medium shadow
+- Always add smooth transitions for shadow changes (~200ms)
 
 ### Transitions & Micro-interactions
-- Hover effects: `transition-colors duration-150` or `transition-all duration-200`
+- Hover effects: smooth color/background transitions (~150-200ms)
 - Button press feedback: slight scale or color change
 - Page elements: subtle fade-in on mount
 - Sidebar/menu open: slide transition with backdrop
@@ -92,15 +92,15 @@ Use a consistent scale throughout the app:
 
 ### Tables
 - Column headers: bold, uppercase or semi-bold, with sort indicators
-- Zebra striping: alternating row backgrounds (subtle, `even:bg-muted/50`)
-- Hover highlighting: `hover:bg-muted transition-colors`
+- Zebra striping: alternating row backgrounds (subtle, muted tone)
+- Hover highlighting: subtle background change on row hover with smooth transition
 - Text alignment: text left, numbers right, status centered
 - Actions column: icon buttons with tooltips
 - Pagination: show current page, total pages, and per-page count
 
 ### Cards / Grid Views
 - Consistent card sizing within a grid
-- Rounded corners (`rounded-lg`)
+- Rounded corners (medium to large radius)
 - Border or shadow for visual separation
 - Hover effect for clickable cards
 - Image aspect ratio maintained

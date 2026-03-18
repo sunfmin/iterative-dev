@@ -75,6 +75,41 @@ You may use any category that makes sense for the project.
 **ONLY:**
 - Change `"passes": false` to `"passes": true` after thorough verification
 
+## Outcome-Oriented Features (NON-NEGOTIABLE)
+
+### The Problem This Solves
+
+The #1 cause of features that "pass" but don't work is **component-level feature definition**. When features are defined as UI components ("category list page", "category form", "delete dialog"), each component gets verified in isolation — but nobody verifies the user can actually complete the journey across components. The Edit button may exist on the list page, but if it navigates to a broken route, or the form doesn't submit, or the submission doesn't update the list, the feature is marked "passes: true" anyway because each component *looks* correct in its screenshot.
+
+### The Rule
+
+**Features MUST be defined as user outcomes, not implementation components.**
+
+Ask: "What can the user (or caller) DO when this feature is done?" — not "What UI component (or module) exists?"
+
+This applies universally to all project types:
+- **Web/Mobile:** "User can manage categories" — not "Category list page" + "Category form" + "Delete dialog"
+- **API:** "Client can manage products via REST" — not "POST endpoint" + "GET endpoint" + "PUT endpoint"
+- **CLI:** "User can initialize and configure a project" — not "Init command" + "Config file generation"
+- **Library:** "Caller can parse, transform, and serialize data" — not "Parse function" + "Transform function" + "Serialize function"
+- **Data:** "Pipeline ingests, transforms, and outputs daily reports" — not "Ingestion step" + "Transform step" + "Output step"
+
+### Why This Works
+
+When a feature is an outcome ("user can manage categories"), the verification naturally covers the full journey:
+- Can the user see the list? (list renders with data)
+- Can the user create one? (form works, submission saves, new item appears in list)
+- Can the user edit one? (edit loads existing data, changes persist)
+- Can the user delete one? (confirmation works, item removed)
+
+When a feature is a component ("category list page"), the verification only covers that component:
+- Does the page render? ✓ (but Edit button may be broken)
+- Does it look nice? ✓ (but clicking anything may fail)
+
+### Infrastructure / Scaffolding Exception
+
+Some features are genuinely infrastructure with no user-facing outcome: project setup, database migration, code generation, CI/CD configuration. These are fine as component-level features. The rule applies to features that deliver **user-facing or caller-facing functionality**.
+
 ## Self-Contained Features (NON-NEGOTIABLE)
 
 Every feature MUST be independently verifiable. This means:
@@ -86,59 +121,57 @@ Every feature MUST be independently verifiable. This means:
 
 **Why:** When testing is a separate feature at the end, it creates a false sense of progress — features appear "done" but are unverified. It also makes the test-writing disconnected from the implementation context. Each feature must stand on its own: implemented, tested, and verified before moving on.
 
+## Verification Must Prove the Outcome (NON-NEGOTIABLE)
+
+This is the universal verification principle that applies to ALL project types:
+
+**Verification must prove the user/caller can achieve the outcome described in the feature, not just that the code exists or compiles.**
+
+| Project Type | WRONG verification | RIGHT verification |
+|-------------|-------------------|-------------------|
+| **Web** | Screenshot of a page that renders | Playwright test: user clicks, fills, submits, and sees result |
+| **API** | Code compiles, handler function exists | Integration test: HTTP request returns correct response |
+| **CLI** | Binary builds successfully | Run the command, verify output matches expected |
+| **Library** | Types compile, function exists | Unit test: call function with input, verify output |
+| **Data** | Pipeline script has no syntax errors | Run pipeline on sample data, verify output schema and values |
+| **Mobile** | Screenshot of initial screen render | Interaction test: tap, swipe, verify navigation and state changes |
+
+### How to Write Verification Steps
+
+For each feature, ask: **"If I were a user/caller, how would I prove this works?"** Then write steps that do exactly that.
+
+**Bad steps** (prove code exists):
+```
+"Create the product list component"
+"Add the edit form route"
+"Run tsc --noEmit"
+"Take a screenshot"
+```
+
+**Good steps** (prove outcome works):
+```
+"Seed 3 products via API, navigate to /products, verify all 3 are visible with correct names and prices"
+"Click Edit on a product, verify form loads with existing data, change the name, submit, verify the updated name appears in the list"
+"Click Delete, confirm in dialog, verify the product is removed from the list"
+"Run all tests and verify they pass"
+```
+
+The difference: bad steps verify the code was written. Good steps verify the feature works from the user's perspective.
+
 ## Screenshot & Visual Review Steps (web/mobile — NON-NEGOTIABLE)
 
-For `web` and `mobile` project types, every feature that produces or modifies UI MUST include **screenshot capture and visual review** as explicit steps in its `steps` array. Without these steps, the subagent will implement the UI but skip visual verification — and the parent agent's screenshot gate becomes the only safety net (which is too late and easy to miss).
+For `web` and `mobile` project types, every feature that produces or modifies UI MUST include **screenshot capture and visual review** as explicit steps in its `steps` array. Screenshots are the secondary verification layer — they catch visual/design issues that interaction tests don't (spacing, alignment, colors, polish).
 
-**Rule:** If a feature creates or modifies any file that renders user-visible HTML/JSX (routes, components, pages, layouts), it is a UI feature and its `steps` MUST include:
+**Rule:** If a feature creates or modifies any file that renders user-visible HTML/JSX, its `steps` MUST include:
 
-1. A step to **capture screenshots** via Playwright at key states (list view, empty state, form, after action, error state)
+1. A step to **capture screenshots** via Playwright at key states (after completing user flows, at empty/loading/error states)
 2. A step to **run Playwright tests** and verify screenshots are generated
 3. A step to **visually review** each screenshot for layout, spacing, hierarchy, states, and polish
 4. A step to **fix visual issues** and re-capture until acceptable
 
-**Anti-pattern (WRONG) — UI feature without screenshot steps:**
-```json
-{"id": 9, "description": "Category management pages", "steps": [
-  "Create category list page with data table",
-  "Create category form with validation",
-  "Write E2E test: create category, verify it appears",
-  "Run pnpm test — all pass"
-]}
-```
-
-**Correct pattern — UI feature WITH screenshot steps:**
-```json
-{"id": 9, "description": "Category management pages", "steps": [
-  "Create category list page with data table, empty state, loading skeleton",
-  "Create category form with React Hook Form + Zod validation",
-  "Write E2E test: seed data via API, verify list displays seeded data",
-  "Write E2E test: create category via form, verify it appears in list",
-  "Run pnpm tsc --noEmit and pnpm test — all pass",
-  "Capture screenshots: list with data, empty state, create form, edit form, delete confirmation",
-  "Run Playwright screenshot tests and verify PNGs are generated in e2e/screenshots/",
-  "Visually review each screenshot: layout, spacing, hierarchy, loading/empty/error states, polish",
-  "Fix any visual issues found in screenshots and re-capture until quality is acceptable"
-]}
-```
+**IMPORTANT:** Screenshots supplement interaction tests — they do NOT replace them. A feature that has screenshots but no interaction tests is NOT verified. A feature that has interaction tests but no screenshots is functionally verified but not visually verified. Both are required.
 
 **Backend-only features** (services, models, API endpoints, migrations) do NOT need screenshot steps.
-
-**Anti-pattern (WRONG):**
-```json
-{"id": 5, "description": "Product CRUD backend service", "steps": ["Implement create", "Implement list", "Implement update", "Implement delete"]},
-{"id": 13, "description": "Backend integration tests for all services", "steps": ["Write tests for categories", "Write tests for products", "Run full suite"]}
-```
-
-**Correct pattern:**
-```json
-{"id": 5, "description": "Product CRUD backend service", "steps": [
-  "Implement ProductService with Create, List, GetByID, Update, Delete",
-  "Write integration tests: create product, verify response matches fixture",
-  "Write integration tests: list with pagination, filter by category/status",
-  "Write integration tests: update product, delete product, duplicate SKU rejection",
-  "Run go test -v -race ./tests/ and verify all pass"
-]}
 
 ## Priority Order
 
@@ -152,41 +185,42 @@ Work on features in this order:
 
 ### Write Verifiable Steps
 
-Every feature's test steps should be concrete and verifiable. The steps depend on project type:
+Every feature's test steps should be concrete and verifiable — they should describe **what the user/caller does and what they see/get back**, not what the developer builds.
 
 **Web projects:**
-- "Step N: Verify loading skeleton appears while data loads"
-- "Step N: Verify empty state shows icon, message, and CTA when no items exist"
-- "Step N: Verify the page renders correctly at mobile width (375px)"
+- "Seed 2 items via API, navigate to /items, verify both items visible with correct data"
+- "Click 'New Item', fill the form, submit, verify new item appears in the list"
+- "Click Edit on an item, verify form has existing data, change a field, submit, verify change persists"
+- "Delete an item, verify it's removed from the list"
 
 **API projects:**
-- "Step N: POST /api/products with valid body returns 201 and product object"
-- "Step N: POST /api/products with missing name returns 400 with field error"
-- "Step N: GET /api/products without auth returns 401"
+- "POST /api/products with valid body returns 201 and product object"
+- "POST /api/products with missing name returns 400 with field error"
+- "GET /api/products returns list including the created product"
 
 **CLI projects:**
-- "Step N: Run `mytool list --format json` and verify JSON output"
-- "Step N: Run `mytool` with no args and verify help text is shown"
-- "Step N: Run `mytool process --input missing.txt` and verify error message"
+- "Run `mytool init myproject`, verify directory structure created"
+- "Run `mytool init` without name, verify helpful error message shown"
+- "Run `mytool init myproject` twice, verify idempotent (no error)"
 
 **Library projects:**
-- "Step N: Call parse('valid input') and verify correct result"
-- "Step N: Call parse('') and verify it returns descriptive error"
-- "Step N: Verify Parse is exported from the public API"
+- "Call parse('valid input') and verify correct result"
+- "Call parse('') and verify it returns descriptive error"
+- "Verify Parse is exported in public API"
 
 **Data projects:**
-- "Step N: Run pipeline with sample input and verify output schema"
-- "Step N: Run pipeline with empty input and verify empty output (not error)"
-- "Step N: Verify aggregation totals match expected values"
+- "Run pipeline with sample input and verify output schema"
+- "Run pipeline with empty input and verify empty output (not error)"
+- "Verify aggregation totals match expected values"
 
 **Mobile projects:**
-- "Step N: Tap login button and verify navigation to dashboard"
-- "Step N: Verify loading indicator during API call"
-- "Step N: Verify layout on small screen (iPhone SE)"
+- "Tap login button, verify navigation to dashboard"
+- "Fill search field, verify results filter in real-time"
+- "Pull to refresh, verify data updates"
 
 ## Examples
 
-Note: Every example below shows features that are **self-contained** — each feature includes implementation AND test/verification steps. There are no separate "write tests" features.
+Note: Every example below defines features as **user outcomes** with verification steps that **prove the outcome works**. Features are NOT split into component-level pieces.
 
 ### Web Project (Full-Stack)
 ```json
@@ -197,22 +231,57 @@ Note: Every example below shows features that are **self-contained** — each fe
       "id": 1,
       "category": "functional",
       "priority": "high",
-      "description": "User registration with email and password",
+      "description": "Project scaffolding and shared infrastructure",
       "steps": [
-        "Implement registration API endpoint (POST /api/register)",
-        "Write backend integration test: valid registration returns 201 with user object",
-        "Write backend integration test: duplicate email returns 409",
-        "Write backend integration test: missing fields return 400 with validation errors",
-        "Run go test -v -race ./tests/ and verify backend tests pass",
-        "Implement registration form UI with React Hook Form + Zod validation",
-        "Handle loading, error, and success states in the form",
-        "Write E2E test: navigate to /register, submit empty form, verify inline validation errors",
-        "Write E2E test: fill valid data, submit, verify redirect to dashboard",
-        "Run pnpm tsc --noEmit and pnpm test, verify all pass",
-        "Capture screenshots: registration form empty, form with validation errors, form submitting (loading), successful redirect to dashboard",
-        "Run Playwright screenshot tests, verify PNGs generated in e2e/screenshots/",
-        "Visually review each screenshot: layout, spacing, form field alignment, error message styling, loading state, overall polish",
-        "Fix any visual issues found and re-capture until quality is acceptable"
+        "Initialize frontend (React, Vite, Router, UI library) and backend (Go, framework) projects",
+        "Create shared OpenAPI spec, generate types for both sides",
+        "Create root layout with navigation",
+        "Verify frontend compiles and dev server starts",
+        "Verify backend compiles"
+      ],
+      "passes": false
+    },
+    {
+      "id": 2,
+      "category": "functional",
+      "priority": "high",
+      "description": "User can manage categories (create, view list, edit, delete)",
+      "steps": [
+        "Implement backend: category CRUD endpoints with validation and error handling",
+        "Write backend integration tests: create, list, get, update, delete, duplicate slug rejection",
+        "Run backend tests and verify all pass",
+        "Implement frontend: category list page, create form, edit form, delete confirmation",
+        "Write E2E test: seed category via API, navigate to list, verify it's visible",
+        "Write E2E test: click New, fill form, submit, verify new category in list",
+        "Write E2E test: click Edit on a category, verify form has existing data, change name, submit, verify updated name in list",
+        "Write E2E test: click Delete, confirm, verify category removed from list",
+        "Run all tests, verify all pass",
+        "Capture screenshots of list, create form, edit form, delete dialog, empty state",
+        "Visually review screenshots for layout and polish",
+        "Fix any issues and re-run until all tests pass and screenshots look good"
+      ],
+      "passes": false
+    },
+    {
+      "id": 3,
+      "category": "functional",
+      "priority": "high",
+      "description": "User can manage products (create, view list with filters, edit, delete, bulk status change)",
+      "steps": [
+        "Implement backend: product CRUD + bulk status + filtering endpoints",
+        "Write backend integration tests: all CRUD ops, filters, bulk update, edge cases",
+        "Run backend tests and verify all pass",
+        "Implement frontend: product list with filters/search/pagination, create form, edit form, delete dialog, bulk actions",
+        "Write E2E test: seed products, navigate to list, verify data visible with correct prices and statuses",
+        "Write E2E test: create product with category selection, verify in list",
+        "Write E2E test: edit a product, verify changes persist",
+        "Write E2E test: delete a product, verify removed",
+        "Write E2E test: select multiple products, bulk change status, verify statuses updated",
+        "Write E2E test: filter by category, verify only matching products shown",
+        "Run all tests, verify all pass",
+        "Capture screenshots of list, filters active, bulk selection, forms, dialogs",
+        "Visually review screenshots",
+        "Fix any issues"
       ],
       "passes": false
     }
@@ -229,14 +298,16 @@ Note: Every example below shows features that are **self-contained** — each fe
       "id": 1,
       "category": "functional",
       "priority": "high",
-      "description": "Create product endpoint",
+      "description": "Client can manage products via REST API (CRUD + validation)",
       "steps": [
-        "Implement POST /api/products handler with validation",
-        "Write integration test: POST with valid body returns 201 with id, name, price, created_at",
-        "Write integration test: POST with missing required field returns 400 with field error",
-        "Write integration test: POST with invalid price returns 400 with validation error",
-        "Write integration test: GET /api/products/{id} returns the created product",
-        "Run go test -v -race ./tests/ and verify all pass"
+        "Implement all product endpoints: POST, GET list, GET by ID, PUT, DELETE",
+        "Write integration test: POST with valid body returns 201 with product",
+        "Write integration test: POST with missing required field returns 400",
+        "Write integration test: GET list returns created products with pagination",
+        "Write integration test: PUT updates product, GET returns updated data",
+        "Write integration test: DELETE removes product, GET returns 404",
+        "Write integration test: POST with duplicate SKU returns 409",
+        "Run all tests and verify they pass"
       ],
       "passes": false
     }
@@ -253,13 +324,14 @@ Note: Every example below shows features that are **self-contained** — each fe
       "id": 1,
       "category": "functional",
       "priority": "high",
-      "description": "Init command creates project structure",
+      "description": "User can initialize and configure a new project",
       "steps": [
         "Implement init command with directory creation and config generation",
-        "Write test: `mytool init myproject` in empty directory creates src/, tests/, config/",
-        "Write test: verify config file has correct defaults",
-        "Write test: `mytool init` without name shows error message with usage hint",
-        "Write test: `mytool init myproject` again is idempotent (no error, no overwrite)",
+        "Write test: `mytool init myproject` creates expected directory structure",
+        "Write test: `mytool init myproject` generates config with correct defaults",
+        "Write test: `mytool init` without name shows helpful error",
+        "Write test: running init twice is idempotent",
+        "Write test: `mytool init --template api` uses API template",
         "Run all tests and verify they pass"
       ],
       "passes": false
@@ -277,13 +349,13 @@ Note: Every example below shows features that are **self-contained** — each fe
       "id": 1,
       "category": "functional",
       "priority": "high",
-      "description": "Parse function handles all input formats",
+      "description": "Caller can parse all supported input formats into AST",
       "steps": [
-        "Implement parse() function for string, interpolation, and edge case inputs",
-        "Write unit test: parse('simple string') returns correct AST node",
-        "Write unit test: parse('nested {value}') handles interpolation",
+        "Implement parse() for strings, interpolation, and nested expressions",
+        "Write unit test: parse('simple string') returns correct AST",
+        "Write unit test: parse('Hello {name}') handles interpolation",
         "Write unit test: parse('') returns descriptive error",
-        "Write unit test: parse(null) returns descriptive error without panic",
+        "Write unit test: parse(null) returns error without panic",
         "Verify Parse is exported in public API",
         "Run all tests and verify they pass"
       ],
