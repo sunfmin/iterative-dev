@@ -143,6 +143,81 @@ export default defineConfig({
 });
 ```
 
+## Full-Stack Integration Smoke Test (NON-NEGOTIABLE for web projects with backend)
+
+When a feature connects the frontend to a real backend API (e.g., replacing mock data with real API calls), a **live integration smoke test** MUST be performed. This catches issues that TypeScript compilation alone cannot detect — CORS, route prefix mismatches, response envelope mismatches, and authentication failures.
+
+### When to Run
+
+Run this smoke test for ANY feature that:
+- Replaces mock/stub data with real API calls
+- Changes the API base URL, fetch wrapper, or custom client
+- Modifies backend route registration or middleware
+- Is the first feature to connect a previously-mocked frontend to the real backend
+
+### Process
+
+**Step 1: Start both servers**
+
+```bash
+# Start backend (with real database)
+cd backend && DATABASE_URL="..." go run ./cmd/api/ &
+sleep 3
+
+# Start frontend (pointing to backend)
+cd frontend && VITE_API_BASE_URL=http://localhost:8080 pnpm dev &
+sleep 3
+```
+
+**Step 2: Verify backend responds to API calls**
+
+```bash
+# Test a list endpoint directly (bypasses CORS — this tests the backend alone)
+curl -s http://localhost:8080/api/v1/<resource> | head -5
+```
+
+If this returns 404, the route prefix is wrong (common with code generators like ogen that don't include the OpenAPI `servers.url` prefix in generated routes). Fix by mounting the generated server under the correct prefix (e.g., `http.StripPrefix("/api/v1", server)`).
+
+**Step 3: Verify CORS headers**
+
+```bash
+curl -s -I -X OPTIONS http://localhost:8080/api/v1/<resource> \
+  -H 'Origin: http://localhost:5173' | grep -i 'access-control'
+```
+
+If no `Access-Control-Allow-Origin` header is present, the browser will block all frontend requests. Add CORS middleware to the backend. This is the **#1 most common cause** of "frontend shows loading forever" bugs in full-stack web projects.
+
+**Step 4: Seed test data and take screenshots**
+
+```bash
+# Seed at least 2-3 records via API
+curl -X POST http://localhost:8080/api/v1/<resource> -H 'Content-Type: application/json' -d '...'
+```
+
+Then run Playwright screenshot tests against all major pages and **visually verify** that:
+- Pages show **real data** (not loading skeletons or empty states)
+- Data matches what was seeded (correct names, counts, values)
+- No console errors in the browser (especially CORS or fetch failures)
+
+**Step 5: Fail-fast criteria**
+
+The integration smoke test FAILS if any of these are true:
+- Backend returns 404 for known API endpoints → route prefix mismatch
+- CORS headers are missing → add CORS middleware
+- Screenshots show loading skeletons that never resolve → API calls failing silently
+- Screenshots show empty states despite seeded data → response envelope mismatch
+- Browser console shows fetch/network errors → connectivity or CORS issue
+
+### Common Root Causes
+
+| Symptom | Root Cause | Fix |
+|---------|-----------|-----|
+| Backend returns 404 for /api/v1/... | Code generator (ogen, openapi-generator) registers routes without server URL prefix | Mount generated handler under `/api/v1` with `http.StripPrefix` or equivalent |
+| Frontend shows loading forever | CORS: browser blocks cross-origin requests | Add CORS middleware (`Access-Control-Allow-Origin: *` for dev) |
+| Frontend shows empty despite seeded data | Response envelope mismatch: frontend expects `{ data: ... }` but backend returns flat response, or vice versa | Align envelope handling in fetch wrapper or backend |
+| API works via curl but not from browser | CORS (curl bypasses CORS, browsers enforce it) | Add CORS middleware |
+| OPTIONS requests return 404 | Backend doesn't handle preflight requests | CORS middleware must handle OPTIONS with 204 No Content |
+
 ## Parent Agent Post-Verification
 
 After subagent completes, parent MUST:
@@ -150,3 +225,4 @@ After subagent completes, parent MUST:
    (`{screenshots_dir}` = absolute path to `e2e/screenshots/` relative to `playwright.config.ts`)
 2. Spot-check one screenshot with the Read tool
 3. If quality is poor, launch a polish subagent
+4. **For full-stack features**: verify screenshots show **real data**, not loading skeletons or empty states. If data is missing, run the integration smoke test above to diagnose.

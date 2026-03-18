@@ -340,6 +340,16 @@ Follow {skill_base_dir}/references/core/gitignore-standards.md:
 - SCREENSHOTS ARE NON-NEGOTIABLE — do not skip or defer them
 - If the app/server is not running for screenshots, start it (check init.sh or start manually)
 {END IF}
+{IF feature connects frontend to real backend API (replaces mocks, changes fetch config):}
+### Full-Stack Integration Verification (NON-NEGOTIABLE)
+This feature connects the frontend to a real backend. You MUST verify the connection works end-to-end:
+1. **Start both servers** — backend with a real database, frontend with VITE_API_BASE_URL pointing to backend
+2. **Verify route prefix** — `curl` the backend API at the URL the frontend will use (e.g., `/api/v1/...`). If 404, the route prefix is wrong. Code generators often omit the OpenAPI `servers.url` prefix — mount the handler under the correct prefix.
+3. **Verify CORS** — `curl -I -X OPTIONS` with an `Origin` header matching the frontend port. If no `Access-Control-Allow-Origin` header, add CORS middleware. This is the #1 reason frontends silently fail to load data.
+4. **Seed data and screenshot** — Seed 2-3 records, take Playwright screenshots of all pages, and verify they show REAL DATA (not loading skeletons or empty states).
+5. **Check browser console** — Run Playwright with console error capture. Any CORS or fetch errors mean the integration is broken.
+Do NOT mark this feature as passing based only on `tsc --noEmit`. TypeScript cannot catch CORS or route mismatches.
+{END IF}
 ```
 
 **How to launch the subagent:**
@@ -391,6 +401,30 @@ The subagent handles implementation, testing, verification, and committing. The 
       - Real data shown, not empty/broken?
       - Polished appearance, not prototype-level?
       - If quality is poor, launch a **polish subagent** to fix UI issues and recapture.
+
+   **For `web` full-stack projects — INTEGRATION SMOKE TEST GATE (NON-NEGOTIABLE):**
+
+   This gate MUST be executed for ANY feature that connects the frontend to a real backend API (replacing mocks, changing fetch config, modifying backend routes/middleware). This is the **#1 source of silent failures** — TypeScript compiles clean but the app shows loading spinners forever because of CORS or route prefix issues.
+
+   After the subagent commits, the parent agent MUST:
+
+   a. **Start both servers** (backend with real database, frontend pointing to backend)
+   b. **Verify backend routes respond** (not 404):
+      ```bash
+      curl -s http://localhost:{backend_port}/api/v1/{any_resource} | head -3
+      ```
+      If 404: route prefix mismatch. Code generators (ogen, openapi-generator) often register routes without the OpenAPI `servers.url` prefix. Fix by mounting the generated handler under `/api/v1` with `http.StripPrefix` or equivalent.
+   c. **Verify CORS headers**:
+      ```bash
+      curl -s -I -X OPTIONS http://localhost:{backend_port}/api/v1/{any_resource} \
+        -H 'Origin: http://localhost:{frontend_port}' | grep -i 'access-control'
+      ```
+      If missing: add CORS middleware to the backend. Without it, browsers silently block all frontend API requests.
+   d. **Seed test data** via API (at least 2-3 records)
+   e. **Run Playwright screenshots** against all major pages
+   f. **Verify screenshots show REAL DATA** — not loading skeletons, not empty states. If data is missing, diagnose using the common root causes table in `references/verification/web-verification.md`.
+
+   If any check fails, launch a fix subagent before moving to the next feature.
 
    **For `api` projects:**
    - Verify integration tests exist and pass
@@ -479,6 +513,9 @@ Since the human may be asleep, follow these rules for autonomous decisions:
 | **Web/mobile:** Unclear UI design | Follow references/web/frontend-design.md |
 | **Web/mobile:** UI looks generic/plain | Add visual polish per references/web/ux-standards.md |
 | **Web/mobile:** Subagent skipped screenshots | Launch follow-up subagent to add them |
+| **Web full-stack:** Frontend shows loading forever | Check CORS headers and route prefix — see `references/verification/web-verification.md` Integration Smoke Test |
+| **Web full-stack:** curl works but browser doesn't | CORS issue — add `Access-Control-Allow-Origin` middleware to backend |
+| **Web full-stack:** Backend returns 404 for /api/v1/... | Code generator omitted server URL prefix — mount handler under `/api/v1` |
 | **API:** Unclear response format | Follow existing endpoint patterns, use consistent error format |
 | **CLI:** Unclear output format | Match existing command output style |
 | **Library:** Unclear public API | Keep it minimal, expose only what's needed |
