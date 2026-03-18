@@ -86,6 +86,44 @@ Every feature MUST be independently verifiable. This means:
 
 **Why:** When testing is a separate feature at the end, it creates a false sense of progress — features appear "done" but are unverified. It also makes the test-writing disconnected from the implementation context. Each feature must stand on its own: implemented, tested, and verified before moving on.
 
+## Screenshot & Visual Review Steps (web/mobile — NON-NEGOTIABLE)
+
+For `web` and `mobile` project types, every feature that produces or modifies UI MUST include **screenshot capture and visual review** as explicit steps in its `steps` array. Without these steps, the subagent will implement the UI but skip visual verification — and the parent agent's screenshot gate becomes the only safety net (which is too late and easy to miss).
+
+**Rule:** If a feature creates or modifies any file that renders user-visible HTML/JSX (routes, components, pages, layouts), it is a UI feature and its `steps` MUST include:
+
+1. A step to **capture screenshots** via Playwright at key states (list view, empty state, form, after action, error state)
+2. A step to **run Playwright tests** and verify screenshots are generated
+3. A step to **visually review** each screenshot for layout, spacing, hierarchy, states, and polish
+4. A step to **fix visual issues** and re-capture until acceptable
+
+**Anti-pattern (WRONG) — UI feature without screenshot steps:**
+```json
+{"id": 9, "description": "Category management pages", "steps": [
+  "Create category list page with data table",
+  "Create category form with validation",
+  "Write E2E test: create category, verify it appears",
+  "Run pnpm test — all pass"
+]}
+```
+
+**Correct pattern — UI feature WITH screenshot steps:**
+```json
+{"id": 9, "description": "Category management pages", "steps": [
+  "Create category list page with data table, empty state, loading skeleton",
+  "Create category form with React Hook Form + Zod validation",
+  "Write E2E test: seed data via API, verify list displays seeded data",
+  "Write E2E test: create category via form, verify it appears in list",
+  "Run pnpm tsc --noEmit and pnpm test — all pass",
+  "Capture screenshots: list with data, empty state, create form, edit form, delete confirmation",
+  "Run Playwright screenshot tests and verify PNGs are generated in e2e/screenshots/",
+  "Visually review each screenshot: layout, spacing, hierarchy, loading/empty/error states, polish",
+  "Fix any visual issues found in screenshots and re-capture until quality is acceptable"
+]}
+```
+
+**Backend-only features** (services, models, API endpoints, migrations) do NOT need screenshot steps.
+
 **Anti-pattern (WRONG):**
 ```json
 {"id": 5, "description": "Product CRUD backend service", "steps": ["Implement create", "Implement list", "Implement update", "Implement delete"]},
@@ -170,7 +208,11 @@ Note: Every example below shows features that are **self-contained** — each fe
         "Handle loading, error, and success states in the form",
         "Write E2E test: navigate to /register, submit empty form, verify inline validation errors",
         "Write E2E test: fill valid data, submit, verify redirect to dashboard",
-        "Run pnpm tsc --noEmit and pnpm test, verify all pass"
+        "Run pnpm tsc --noEmit and pnpm test, verify all pass",
+        "Capture screenshots: registration form empty, form with validation errors, form submitting (loading), successful redirect to dashboard",
+        "Run Playwright screenshot tests, verify PNGs generated in e2e/screenshots/",
+        "Visually review each screenshot: layout, spacing, form field alignment, error message styling, loading state, overall polish",
+        "Fix any visual issues found and re-capture until quality is acceptable"
       ],
       "passes": false
     }

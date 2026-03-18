@@ -153,6 +153,19 @@ project-root/
    **CRITICAL — Self-Contained Features (NON-NEGOTIABLE):**
    Every feature MUST include its own test and verification steps. NEVER create separate "testing" or "verification" features (e.g., "Write integration tests", "Add E2E tests for all pages"). Each feature's `steps` array must contain both implementation AND verification steps so the feature can be independently verified when completed. See `references/core/feature-list-format.md` for the "Self-Contained Features" rule and examples.
 
+   **CRITICAL — Screenshot & Visual Review Steps for UI Features (web/mobile — NON-NEGOTIABLE):**
+   For `web` and `mobile` project types, every feature that produces or modifies UI MUST include **screenshot capture and visual review** steps in its `steps` array. These are NOT optional and MUST NOT be deferred to a separate feature. A UI feature without screenshot steps will be implemented without visual verification, which defeats the purpose of the screenshot gate.
+
+   Every UI feature's `steps` array MUST end with these steps (adapted to the feature):
+   ```
+   "Capture screenshots: write/update Playwright test that takes fullPage screenshots at key states (list view, empty state, form, after action)",
+   "Run Playwright tests and verify screenshots are generated in e2e/screenshots/",
+   "Visually review each screenshot: verify layout, spacing, hierarchy, loading/empty/error states, data display, and overall polish",
+   "Fix any visual issues found and re-capture until quality is acceptable"
+   ```
+
+   **How to determine if a feature is a UI feature:** If the feature creates or modifies files in `src/routes/`, `src/components/`, `src/features/`, or any file that renders user-visible HTML/JSX, it is a UI feature and MUST have screenshot steps. Backend-only features (services, models, API endpoints without frontend) do NOT need screenshot steps.
+
 6. **Create/update init.sh** — see `references/core/init-script-template.md`
 
 7. **Commit and update progress log**
