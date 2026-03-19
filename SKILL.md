@@ -187,8 +187,8 @@ This is the main workflow. It runs ALL remaining features to completion without 
 
 **You MUST keep looping until EVERY feature in `feature_list.json` has `"passes": true`. Do NOT stop after one feature. Do NOT stop after two features. Do NOT stop to report progress to the user. Do NOT ask the human what to do next. The human may be asleep.**
 
-**After EACH subagent completes, you MUST immediately launch the NEXT subagent for the next incomplete feature. The ONLY acceptable reasons to stop are:**
-1. **ALL features have `"passes": true`**
+**After EACH subagent completes, you MUST: verify → refine → then launch the NEXT subagent. The refinement step is NOT optional — it is what makes features delightful instead of just functional. The ONLY acceptable reasons to stop are:**
+1. **ALL features have `"passes": true` AND all refinements are committed**
 2. **A truly unrecoverable error** (hardware failure, missing credentials that cannot be worked around)
 
 **Stopping to "report back" or "check in" with the user is a VIOLATION of this workflow. The user explicitly chose autonomous execution. KEEP GOING.**
@@ -222,8 +222,12 @@ features_completed_this_session = 0
 WHILE there are features with "passes": false in feature_list.json:
     1. Read feature_list.json to find next incomplete feature (highest priority first)
     2. Launch a SUBAGENT to implement, test, verify, and commit
-    3. After subagent completes, VERIFY output quality (see below)
-    4. Launch a REFINEMENT SUBAGENT to polish the feature (see Refinement Phase below)
+    3. After subagent completes, VERIFY output quality (see Verification Gates below)
+    4. ⚠️ REFINEMENT GATE (NON-NEGOTIABLE — see Refinement Phase below):
+       a. Launch a REFINEMENT SUBAGENT to polish UX and code quality
+       b. BLOCK until refinement subagent completes and commits
+       c. Verify refinement report exists: ls specs/{scope}/refinements/feature-{id}-refinement.md
+       d. If report missing → the refinement was SKIPPED → launch another refinement subagent
     5. features_completed_this_session++
     6. If features_completed_this_session % 5 == 0: run STANDARDS AUDIT (see below)
     7. CONTINUE to next feature — do NOT stop
@@ -231,6 +235,15 @@ END WHILE
 
 Run FINAL STANDARDS AUDIT before ending session
 ```
+
+**⚠️ WHY REFINEMENT IS NON-NEGOTIABLE ⚠️**
+
+Implementation subagents build features that *work*. Refinement subagents make features *delightful*. Without the refinement pass:
+- UX issues (poor spacing, weak hierarchy, missing micro-interactions) ship uncaught
+- Code smells (duplication, poor naming, tangled logic) accumulate across features
+- The "second pair of eyes" benefit is lost — self-review has blind spots
+
+**The refinement subagent is the quality difference between "it works" and "users love it".** Skipping it to save time is a false economy — it produces mediocre output that requires rework.
 
 ### Launching Feature Subagents (Claude Code)
 
@@ -451,7 +464,27 @@ The subagent handles implementation, testing, verification, and committing. The 
    - Check edge cases (empty, null, duplicate) are tested
 
 4. If the subagent failed to complete, launch another subagent to fix and finish.
-5. **Launch REFINEMENT SUBAGENT** — See "Refinement Phase" below. This polishes the feature's UX and code quality before moving on.
+
+5. **⚠️ REFINEMENT GATE (NON-NEGOTIABLE — same enforcement level as Screenshot Gate) ⚠️**
+
+   Refinement is what turns "working code" into "delightful product". It MUST happen for EVERY feature, including infrastructure features. Do NOT skip it. Do NOT defer it. Do NOT rationalize skipping it ("it's just scaffolding", "looks good enough", "I'll refine later").
+
+   **The parent agent MUST execute these steps — no exceptions:**
+
+   a. **Launch a REFINEMENT SUBAGENT** using the refinement prompt template below. Wait for it to complete.
+   b. **Verify refinement report exists:**
+      ```bash
+      ls specs/{scope}/refinements/feature-{id}-refinement.md
+      ```
+   c. **If report is missing: BLOCK.** Launch the refinement subagent again. The feature is NOT done without its refinement pass.
+   d. **Verify a refinement commit exists:**
+      ```bash
+      git log --oneline -1 | grep "refine:"
+      ```
+   e. **If no refinement commit: BLOCK.** The refinement subagent failed to commit. Launch again.
+
+   **Why this gate exists:** In practice, the parent agent tends to skip refinement to "save time" and move to the next feature faster. This produces features that work but feel unpolished — generic spacing, weak visual hierarchy, no micro-interactions, duplicated code. The refinement pass is a deliberate "second pair of eyes" that catches what the implementation subagent missed. It is the single biggest quality lever in the workflow.
+
 6. **Loop back IMMEDIATELY** — pick the next incomplete feature and launch a new subagent RIGHT NOW. Do NOT stop, do NOT report to the user, do NOT wait for instructions. KEEP GOING until ALL features pass.
 
 ### Refinement Phase (After Each Feature)
@@ -633,6 +666,8 @@ Since the human may be asleep, follow these rules for autonomous decisions:
 | Unclear file structure | Follow existing project conventions |
 | **Web/mobile:** Unclear UI design | Follow references/web/frontend-design.md |
 | **Web/mobile:** UI looks generic/plain | Add visual polish per references/web/ux-standards.md |
+| **All types:** Tempted to skip refinement | NEVER skip — launch the refinement subagent. It's what makes features delightful. |
+| **All types:** Refinement subagent didn't commit | Launch it again — refinement report + commit are mandatory gates |
 | **Web/mobile:** Subagent skipped screenshots | Launch follow-up subagent to add them |
 | **Web full-stack:** Frontend shows loading forever | Check CORS headers and route prefix — see `references/verification/web-verification.md` Integration Smoke Test |
 | **Web full-stack:** curl works but browser doesn't | CORS issue — add `Access-Control-Allow-Origin` middleware to backend |
@@ -677,20 +712,26 @@ Before ending:
 - NEVER wait for human approval
 - NEVER stop to "report progress" or "check in" — the user can see commits in git log
 - NEVER output a summary and wait — immediately launch the next subagent
-- After each subagent completes: verify → refine → launch next subagent. That's it. No pausing.
+- After each subagent completes: **verify → REFINE → launch next subagent**. That's it. No pausing. No skipping refinement.
+- **The sequence is: implement → verify → REFINE → next feature. All three steps are mandatory. Skipping refinement is as wrong as skipping verification.**
 - Make reasonable decisions based on existing patterns
 - If blocked, try alternative approaches before giving up
 - Keep working until ALL features are complete
 - The continue workflow is a LOOP, not a single step. You are the loop controller.
 
-### Refinement Enforcement
-- Every completed feature MUST go through the refinement phase before moving to the next feature
+### Refinement Enforcement (NON-NEGOTIABLE — same level as Verification Enforcement)
+- **Every completed feature MUST go through the refinement phase before moving to the next feature — NO EXCEPTIONS, including infrastructure features**
 - The refinement subagent is separate from the implementation subagent — fresh context enables better evaluation
 - Refinement MUST NOT add new functionality — it only improves what exists
 - The refinement report (`specs/{scope}/refinements/feature-{id}-refinement.md`) MUST always be written, even if no code changes are made
 - Refinement commits use the prefix `refine:` not `feat:`
 - For web/mobile: UX refinement should think divergently — not just check for bugs, but imagine better ways to present information
 - For all types: code refinement should focus on abstraction, testability, and maintainability
+- **GATE CHECK**: After the refinement subagent completes, the parent MUST verify:
+  1. `specs/{scope}/refinements/feature-{id}-refinement.md` exists (the report)
+  2. `git log --oneline -1` shows a `refine:` commit
+  3. If either is missing, launch the refinement subagent again — do NOT proceed to the next feature
+- **Common failure mode**: The parent agent skips refinement to "move faster". This is explicitly forbidden. The refinement pass is what separates mediocre output from delightful output. It catches UX issues (spacing, hierarchy, micro-interactions) and code issues (duplication, naming, complexity) that the implementation subagent is blind to because it was focused on making things work.
 
 ---
 
