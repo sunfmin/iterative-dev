@@ -32,11 +32,12 @@ lsof -i :8082 | head -2  # Backend
 
 If not running, start them with `bash init.sh`.
 
-### Step 2: Clear Old Screenshots
+### Step 2: Ensure Screenshot Directory Exists
 
 ```bash
-# Clear screenshots from the scope's screenshot directory
-rm -rf specs/{scope}/screenshots/*.png 2>/dev/null || true
+# Screenshots are committed to the repo as results — never delete them
+# New screenshots will overwrite same-named files; old ones are preserved as history
+mkdir -p specs/{scope}/screenshots
 rm -rf test-results/**/*.png 2>/dev/null || true
 ```
 

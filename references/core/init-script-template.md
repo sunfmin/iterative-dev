@@ -27,15 +27,13 @@ pkill -f 'vite' 2>/dev/null || true
 pkill -f 'node.*dev' 2>/dev/null || true
 sleep 1
 
-# 2. Delete old screenshots for fresh test results
-# Screenshots are stored per-scope in specs/{scope}/screenshots/
-echo "Cleaning old test artifacts..."
+# 2. Ensure screenshot and refinement directories exist
+# Screenshots are committed to the repo as results — never delete them
 SCOPE=$(cat .active-scope 2>/dev/null || echo "default")
 SCREENSHOT_DIR="specs/$SCOPE/screenshots"
-rm -rf "$SCREENSHOT_DIR"/*.png 2>/dev/null || true
-rm -rf test-results 2>/dev/null || true
 mkdir -p "$SCREENSHOT_DIR"
 mkdir -p "specs/$SCOPE/refinements"
+rm -rf test-results 2>/dev/null || true
 
 # 3. Install/update dependencies
 echo "Installing dependencies..."
@@ -218,12 +216,11 @@ echo "=== Mobile Development Environment ==="
 # 1. Kill existing processes
 pkill -f 'metro\|react-native' 2>/dev/null || true
 
-# 2. Clean old artifacts
-# Screenshots are stored per-scope in specs/{scope}/screenshots/
+# 2. Ensure screenshot and refinement directories exist
+# Screenshots are committed to the repo as results — never delete them
 SCOPE=$(cat .active-scope 2>/dev/null || echo "default")
-rm -rf "specs/$SCOPE/screenshots"/*.png 2>/dev/null || true
-rm -rf test-results/ 2>/dev/null || true
 mkdir -p "specs/$SCOPE/screenshots" "specs/$SCOPE/refinements"
+rm -rf test-results/ 2>/dev/null || true
 
 # 3. Install dependencies
 npm install
