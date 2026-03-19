@@ -134,6 +134,7 @@ project-root/
    - What does the user interact with? **Browser** → `web`. **Terminal** → `cli`. **Import/call** → `library`. **HTTP requests** → `api`. **Phone/tablet** → `mobile`. **Data outputs** → `data`.
    - Confirm by examining the codebase structure (e.g., frontend frameworks suggest `web`, CLI entry points suggest `cli`, no main entry point suggests `library`)
    - If unclear, default to the most fitting type based on spec.md
+   - **Full-stack detection:** If the project has both a backend (Go, Node, Python, etc.) and a frontend (React, Vue, etc.), features MUST be structured as **vertical slices** — see `references/core/feature-list-format.md` for the "Vertical Slices" rule
 
 5. **Create feature list** — choose the right method:
 
@@ -149,6 +150,9 @@ project-root/
    Use the standard process from `references/core/feature-list-format.md`
 
    **Important:** Include the `"type"` field in feature_list.json (see feature-list-format.md).
+
+   **CRITICAL — Vertical Slices for Full-Stack Projects (NON-NEGOTIABLE):**
+   For full-stack projects (`web` type with both backend and frontend), each domain feature MUST be a **vertical slice** that implements backend AND frontend together in one feature. Do NOT split features by technology layer (e.g., "Backend: category CRUD" then "Frontend: category pages"). Instead, each feature delivers a complete user journey through the entire stack: model → service → API → UI → E2E test. See `references/core/feature-list-format.md` for the "Vertical Slices" rule, examples, and anti-patterns.
 
    **CRITICAL — Self-Contained Features (NON-NEGOTIABLE):**
    Every feature MUST include its own test and verification steps. NEVER create separate "testing" or "verification" features (e.g., "Write integration tests", "Add E2E tests for all pages"). Each feature's `steps` array must contain both implementation AND verification steps so the feature can be independently verified when completed. See `references/core/feature-list-format.md` for the "Self-Contained Features" rule and examples.

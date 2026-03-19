@@ -110,6 +110,68 @@ When a feature is a component ("category list page"), the verification only cove
 
 Some features are genuinely infrastructure with no user-facing outcome: project setup, database migration, code generation, CI/CD configuration. These are fine as component-level features. The rule applies to features that deliver **user-facing or caller-facing functionality**.
 
+## Vertical Slices for Full-Stack Projects (NON-NEGOTIABLE)
+
+### The Problem This Solves
+
+When full-stack features are split by layer — "Backend: category CRUD" then "Frontend: category pages" — the backend gets built in isolation without knowing if the frontend can actually consume it. CORS issues, response envelope mismatches, route prefix problems, and pagination format disagreements all hide until the frontend feature starts. By then, the backend is "done" and marked passing, but must be reworked. Worse, the developer loses the backend implementation context by the time frontend work begins.
+
+### The Rule
+
+**For full-stack projects (`web` type with both backend and frontend), each domain feature MUST be a vertical slice that implements backend AND frontend together in one feature.**
+
+A vertical slice delivers a complete, working user journey through the entire stack: database model → service → API endpoint → generated types → UI component → E2E test. When the feature is done, the user can actually use it end-to-end.
+
+### How to Structure Vertical Slice Steps
+
+Each full-stack feature's `steps` array should flow through the stack in order:
+
+1. **Backend model & service** — GORM model, service interface & implementation, business logic
+2. **Backend wiring** — Handler implementation, error mapping, route registration
+3. **Backend integration tests** — Table-driven tests through root mux ServeHTTP
+4. **Frontend UI** — Pages, forms, tables, using generated hooks from the shared OpenAPI spec
+5. **Frontend E2E tests** — Playwright tests against the real running backend
+6. **Screenshots & visual review** — Capture and review key states
+
+### Examples
+
+**CORRECT — Vertical slice (backend + frontend together):**
+```json
+{
+  "id": 2,
+  "description": "User can manage categories (create, view list, edit, delete)",
+  "category": "full-stack",
+  "steps": [
+    "Create backend model, service, and handler for category CRUD",
+    "Write backend integration tests for all category operations",
+    "Run backend tests and verify all pass",
+    "Build frontend category list, create form, edit form, delete dialog using generated hooks",
+    "Write E2E tests: seed via API, test full CRUD journey through the UI",
+    "Capture screenshots and visually review",
+    "Fix any issues and re-run until all pass"
+  ]
+}
+```
+
+**WRONG — Split by layer (backend separate from frontend):**
+```json
+// DON'T DO THIS — features split by technology layer
+{ "id": 2, "description": "Backend: category CRUD API endpoints", "category": "backend", ... },
+{ "id": 3, "description": "Backend: product CRUD API endpoints", "category": "backend", ... },
+{ "id": 4, "description": "Frontend: category management pages", "category": "frontend", ... },
+{ "id": 5, "description": "Frontend: product management pages", "category": "frontend", ... }
+```
+
+### Infrastructure / Scaffolding Exception
+
+The first feature (project scaffolding) naturally spans both stacks and is fine as infrastructure. The rule applies to **domain features** that deliver user-facing functionality — these must be vertical slices.
+
+### When This Rule Applies
+
+- **Full-stack web projects** (Go + React, Node + React, etc.) — ALWAYS use vertical slices for domain features
+- **API-only or frontend-only projects** — Rule does not apply (there's only one layer)
+- **Projects with independent backend/frontend repos** — Use vertical slices if both are in the same repo/scope
+
 ## Self-Contained Features (NON-NEGOTIABLE)
 
 Every feature MUST be independently verifiable. This means:
@@ -222,40 +284,44 @@ Every feature's test steps should be concrete and verifiable — they should des
 
 Note: Every example below defines features as **user outcomes** with verification steps that **prove the outcome works**. Features are NOT split into component-level pieces.
 
-### Web Project (Full-Stack)
+### Web Project (Full-Stack — Vertical Slices)
+
+Each domain feature is a **vertical slice** — backend and frontend developed together. See "Vertical Slices for Full-Stack Projects" rule above.
+
 ```json
 {
   "type": "web",
   "features": [
     {
       "id": 1,
-      "category": "functional",
+      "category": "infrastructure",
       "priority": "high",
       "description": "Project scaffolding and shared infrastructure",
       "steps": [
-        "Initialize frontend (React, Vite, Router, UI library) and backend (Go, framework) projects",
-        "Create shared OpenAPI spec, generate types for both sides",
-        "Create root layout with navigation",
-        "Verify frontend compiles and dev server starts",
-        "Verify backend compiles"
+        "Create shared OpenAPI spec with all schemas and endpoints",
+        "Initialize backend (Go, framework, ogen codegen) and frontend (React, Vite, Router, UI library, orval codegen)",
+        "Generate types for both sides from the shared OpenAPI spec",
+        "Create root layout with navigation, route placeholders, custom fetch config",
+        "Set up Playwright config and test helpers",
+        "Verify backend compiles and frontend dev server starts"
       ],
       "passes": false
     },
     {
       "id": 2,
-      "category": "functional",
+      "category": "full-stack",
       "priority": "high",
       "description": "User can manage categories (create, view list, edit, delete)",
       "steps": [
-        "Implement backend: category CRUD endpoints with validation and error handling",
-        "Write backend integration tests: create, list, get, update, delete, duplicate slug rejection",
+        "Create backend model, service with business logic, and wire into ogen handler",
+        "Write backend integration tests: create, list, get, update, delete, edge cases",
         "Run backend tests and verify all pass",
-        "Implement frontend: category list page, create form, edit form, delete confirmation",
+        "Build frontend category list page, create form, edit form, delete confirmation using generated hooks",
         "Write E2E test: seed category via API, navigate to list, verify it's visible",
         "Write E2E test: click New, fill form, submit, verify new category in list",
         "Write E2E test: click Edit on a category, verify form has existing data, change name, submit, verify updated name in list",
         "Write E2E test: click Delete, confirm, verify category removed from list",
-        "Run all tests, verify all pass",
+        "Run all tests (backend + E2E), verify all pass",
         "Capture screenshots of list, create form, edit form, delete dialog, empty state",
         "Visually review screenshots for layout and polish",
         "Fix any issues and re-run until all tests pass and screenshots look good"
@@ -264,21 +330,21 @@ Note: Every example below defines features as **user outcomes** with verificatio
     },
     {
       "id": 3,
-      "category": "functional",
+      "category": "full-stack",
       "priority": "high",
       "description": "User can manage products (create, view list with filters, edit, delete, bulk status change)",
       "steps": [
-        "Implement backend: product CRUD + bulk status + filtering endpoints",
+        "Create backend model, service with filtering/pagination/bulk-update logic, and wire into ogen handler",
         "Write backend integration tests: all CRUD ops, filters, bulk update, edge cases",
         "Run backend tests and verify all pass",
-        "Implement frontend: product list with filters/search/pagination, create form, edit form, delete dialog, bulk actions",
+        "Build frontend product list with filters/search/pagination, create form, edit form, delete dialog, bulk actions using generated hooks",
         "Write E2E test: seed products, navigate to list, verify data visible with correct prices and statuses",
         "Write E2E test: create product with category selection, verify in list",
         "Write E2E test: edit a product, verify changes persist",
         "Write E2E test: delete a product, verify removed",
         "Write E2E test: select multiple products, bulk change status, verify statuses updated",
         "Write E2E test: filter by category, verify only matching products shown",
-        "Run all tests, verify all pass",
+        "Run all tests (backend + E2E), verify all pass",
         "Capture screenshots of list, filters active, bulk selection, forms, dialogs",
         "Visually review screenshots",
         "Fix any issues"
