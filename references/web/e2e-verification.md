@@ -8,16 +8,9 @@ Verify features work correctly using Playwright E2E tests with screenshot captur
 
 ## Screenshot Directory
 
-Screenshots are stored in `e2e/screenshots/` **relative to the directory containing `playwright.config.ts`**. This varies by project structure:
+Screenshots are stored per-scope at `specs/{scope}/screenshots/` relative to the project root. The parent agent resolves this to an absolute path (`{pwd}/specs/{scope}/screenshots/`) and passes it as `{screenshots_dir}` in the subagent prompt.
 
-| Project Structure | `playwright.config.ts` location | Screenshot directory |
-|---|---|---|
-| Monorepo (`frontend/` subdir) | `frontend/playwright.config.ts` | `frontend/e2e/screenshots/` |
-| Standalone frontend (root) | `playwright.config.ts` | `e2e/screenshots/` |
-
-In Playwright test code, always use the **relative** path `e2e/screenshots/...` — Playwright resolves it from its config directory.
-
-For parent agent verification, resolve to an **absolute** path: find `playwright.config.ts`, then append `e2e/screenshots/`.
+In Playwright test code, always use the **absolute** `{screenshots_dir}` path provided by the parent agent in `page.screenshot()` calls.
 
 ## Prerequisites
 
@@ -41,11 +34,9 @@ If not running, start them with `bash init.sh`.
 
 ### Step 2: Clear Old Screenshots
 
-The screenshot directory is `e2e/screenshots/` relative to the directory containing `playwright.config.ts`. In a monorepo (e.g., `frontend/`), run commands from that subdirectory. In a standalone project, run from the project root.
-
 ```bash
-# Run from the directory containing playwright.config.ts
-rm -rf e2e/screenshots/*.png e2e/screenshots/**/*.png 2>/dev/null || true
+# Clear screenshots from the scope's screenshot directory
+rm -rf specs/{scope}/screenshots/*.png 2>/dev/null || true
 rm -rf test-results/**/*.png 2>/dev/null || true
 ```
 
@@ -83,7 +74,7 @@ Common failure causes:
 ### Step 5: List All Screenshots
 
 ```bash
-find e2e/screenshots -name "*.png" -type f 2>/dev/null | sort
+find specs/{scope}/screenshots -name "*.png" -type f 2>/dev/null | sort
 find test-results -name "*.png" -type f 2>/dev/null | sort
 ```
 
@@ -181,7 +172,7 @@ test('user can login', async ({ page }) => {
 
   // Screenshot: Login page initial state
   await page.screenshot({
-    path: `e2e/screenshots/auth-feature-1-step1-login-initial.png`,
+    path: `${screenshots_dir}/feature-1-step1-login-initial.png`,
     fullPage: true
   });
 
@@ -193,7 +184,7 @@ test('user can login', async ({ page }) => {
 
   // Screenshot: Dashboard after login
   await page.screenshot({
-    path: `e2e/screenshots/auth-feature-1-step2-dashboard-after-login.png`,
+    path: `${screenshots_dir}/feature-1-step2-dashboard-after-login.png`,
     fullPage: true
   });
 });
@@ -202,7 +193,7 @@ test('user can login', async ({ page }) => {
 ### Screenshot Rules (MANDATORY)
 
 - **Every test MUST have at least one `page.screenshot()` call**
-- Name screenshots descriptively with scope prefix
+- Name screenshots descriptively (scope is encoded in the directory path)
 - Use `fullPage: true` to capture complete page state
 - Capture at key user journey points (before action, after action, error state)
 - Include error states and empty states in screenshots
@@ -211,29 +202,27 @@ test('user can login', async ({ page }) => {
   // Desktop screenshot
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.screenshot({
-    path: 'e2e/screenshots/scope-feature-1-step1-desktop.png',
+    path: `${screenshots_dir}/feature-1-step1-desktop.png`,
     fullPage: true
   });
 
   // Mobile screenshot
   await page.setViewportSize({ width: 375, height: 812 });
   await page.screenshot({
-    path: 'e2e/screenshots/scope-feature-1-step1-mobile.png',
+    path: `${screenshots_dir}/feature-1-step1-mobile.png`,
     fullPage: true
   });
   ```
 
 ### Screenshot Naming Convention
 
-Format: `{scope}-feature-{id}-step{N}-{description}.png`
-
-The scope name comes from `.active-scope` file (e.g., "auth", "core", "video-editor").
+Format: `feature-{id}-step{N}-{description}.png` (scope is encoded in the directory path `specs/{scope}/screenshots/`)
 
 Examples:
-- `auth-feature-17-step3-modal-open.png`
-- `core-feature-7-step6-project-in-list.png`
-- `video-editor-feature-15-complete-flow.png`
-- `pim-feature-4-step2-validation-errors.png`
+- `feature-17-step3-modal-open.png`
+- `feature-7-step6-project-in-list.png`
+- `feature-15-complete-flow.png`
+- `feature-4-step2-validation-errors.png`
 
 ## Playwright Configuration
 

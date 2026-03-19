@@ -89,7 +89,7 @@ This principle applies beyond CRUD. For any feature:
 
 In addition to interaction tests, capture screenshots for visual review.
 
-**Screenshot directory:** Screenshots are stored in `e2e/screenshots/` relative to the directory containing `playwright.config.ts`. In a monorepo with `frontend/`, this is `frontend/e2e/screenshots/`. In a standalone frontend project, this is `e2e/screenshots/` at the project root. The parent agent resolves this to an absolute path and passes it as `{screenshots_dir}` in the subagent prompt.
+**Screenshot directory:** Screenshots are stored per-scope at `specs/{scope}/screenshots/` relative to the project root. The parent agent resolves this to an absolute path (`{pwd}/specs/{scope}/screenshots/`) and passes it as `{screenshots_dir}` in the subagent prompt.
 
 ```typescript
 import { test, expect } from '@playwright/test';
@@ -100,7 +100,7 @@ test('user can login', async ({ page }) => {
   // Screenshot: Initial state
   // Path is relative to the Playwright project root (where playwright.config.ts lives)
   await page.screenshot({
-    path: `e2e/screenshots/${scope}-feature-${id}-step1-login-initial.png`,
+    path: `${screenshots_dir}/feature-${id}-step1-login-initial.png`,
     fullPage: true
   });
 
@@ -112,7 +112,7 @@ test('user can login', async ({ page }) => {
 
   // Screenshot: After action
   await page.screenshot({
-    path: `e2e/screenshots/${scope}-feature-${id}-step2-dashboard-after-login.png`,
+    path: `${screenshots_dir}/feature-${id}-step2-dashboard-after-login.png`,
     fullPage: true
   });
 });
@@ -172,11 +172,11 @@ If screenshots reveal problems:
 
 ## Screenshot Naming Convention
 
-Format: `{scope}-feature-{id}-step{N}-{description}.png`
+Format: `feature-{id}-step{N}-{description}.png` (scope is encoded in the directory path `specs/{scope}/screenshots/`)
 
 Examples:
-- `auth-feature-17-step3-modal-open.png`
-- `core-feature-7-step6-project-in-list.png`
+- `feature-17-step3-modal-open.png`
+- `feature-7-step6-project-in-list.png`
 
 ## Playwright Configuration
 
@@ -276,8 +276,8 @@ The integration smoke test FAILS if any of these are true:
 
 After subagent completes, parent MUST:
 1. **Confirm interaction tests exist and pass** — for CRUD features, check that the subagent wrote tests that exercise user flows (create, edit, delete), not just screenshot-only tests. If tests only take screenshots without clicking/submitting, the feature is NOT verified.
-2. Confirm screenshots exist: `ls {screenshots_dir}/{scope}-feature-{id}-*.png 2>/dev/null | wc -l`
-   (`{screenshots_dir}` = absolute path to `e2e/screenshots/` relative to `playwright.config.ts`)
+2. Confirm screenshots exist: `ls {screenshots_dir}/feature-{id}-*.png 2>/dev/null | wc -l`
+   (`{screenshots_dir}` = `{pwd}/specs/{scope}/screenshots/`)
 3. Spot-check one screenshot with the Read tool — verify it shows **real data and completed states** (e.g., edit form with pre-filled data, not just an empty form)
 4. If quality is poor, launch a polish subagent
 5. **For full-stack features**: verify screenshots show **real data**, not loading skeletons or empty states. If data is missing, run the integration smoke test above to diagnose.

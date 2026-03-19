@@ -92,11 +92,15 @@ project-root/
 │   ├── auth/
 │   │   ├── spec.md
 │   │   ├── feature_list.json
-│   │   └── progress.txt
+│   │   ├── progress.txt
+│   │   ├── screenshots/
+│   │   └── refinements/
 │   └── video-editor/
 │       ├── spec.md
 │       ├── feature_list.json
-│       └── progress.txt
+│       ├── progress.txt
+│       ├── screenshots/
+│       └── refinements/
 ├── .active-scope
 ├── spec.md              # Symlink to active scope
 ├── feature_list.json    # Symlink to active scope
@@ -114,7 +118,7 @@ project-root/
 
 2. **Create new scope** (if needed)
    ```bash
-   mkdir -p specs/auth
+   mkdir -p specs/auth/{screenshots,refinements}
    # Create specs/auth/spec.md with specification
    ```
 
@@ -158,7 +162,7 @@ project-root/
    ```
    "Write interaction tests: Playwright tests that perform user actions (click, fill, submit, navigate) and verify outcomes (data appears, page navigates, state changes)",
    "Capture screenshots: add fullPage screenshots at key states (list view, empty state, form, after action)",
-   "Run Playwright tests and verify all pass and screenshots are generated in e2e/screenshots/",
+   "Run Playwright tests and verify all pass and screenshots are generated in specs/{scope}/screenshots/",
    "Visually review each screenshot: verify layout, spacing, hierarchy, loading/empty/error states, data display, and overall polish",
    "Fix any issues found (broken behavior or visual problems) and re-run until quality is acceptable"
    ```
@@ -215,9 +219,10 @@ WHILE there are features with "passes": false in feature_list.json:
     1. Read feature_list.json to find next incomplete feature (highest priority first)
     2. Launch a SUBAGENT to implement, test, verify, and commit
     3. After subagent completes, VERIFY output quality (see below)
-    4. features_completed_this_session++
-    5. If features_completed_this_session % 5 == 0: run STANDARDS AUDIT (see below)
-    6. CONTINUE to next feature — do NOT stop
+    4. Launch a REFINEMENT SUBAGENT to polish the feature (see Refinement Phase below)
+    5. features_completed_this_session++
+    6. If features_completed_this_session % 5 == 0: run STANDARDS AUDIT (see below)
+    7. CONTINUE to next feature — do NOT stop
 END WHILE
 
 Run FINAL STANDARDS AUDIT before ending session
@@ -285,10 +290,10 @@ Follow {skill_base_dir}/references/verification/{type}-verification.md:
 
 Interaction tests (Phase 3) are the PRIMARY verification that features work. Screenshots are SECONDARY but MANDATORY — they verify visual quality and catch layout/styling issues that interaction tests cannot detect. A feature without both interaction tests and screenshots is NOT fully verified.
 
-**Screenshot directory:** `{screenshots_dir}` (provided by parent agent — this is the absolute path to where screenshots are stored, e.g., `/path/to/project/frontend/e2e/screenshots` for a monorepo or `/path/to/project/e2e/screenshots` for a standalone frontend).
+**Screenshot directory:** `{screenshots_dir}` (provided by parent agent — this is `{pwd}/specs/{scope}/screenshots/`, the scope-specific directory for all visual artifacts).
 
 13. Write or update a Playwright test file that captures screenshots at key states:
-    - Use `page.screenshot({ path: '{screenshots_dir}/{scope}-feature-{id}-step{N}-{description}.png', fullPage: true })`
+    - Use `page.screenshot({ path: '{screenshots_dir}/feature-{id}-step{N}-{description}.png', fullPage: true })`
     - Capture BEFORE action, AFTER action, error states, and empty states
     - Every test MUST have at least one `page.screenshot()` call
 
@@ -299,7 +304,7 @@ Interaction tests (Phase 3) are the PRIMARY verification that features work. Scr
 
 15. Verify screenshots were generated:
     ```bash
-    ls {screenshots_dir}/{scope}-feature-{id}-*.png
+    ls {screenshots_dir}/feature-{id}-*.png
     ```
     If no screenshots exist, the verification has FAILED. Fix and re-run.
 
@@ -313,8 +318,8 @@ Interaction tests (Phase 3) are the PRIMARY verification that features work. Scr
 
 17. If screenshots reveal problems, fix the UI and re-capture until quality is acceptable.
 
-**Screenshot naming convention:** `{scope}-feature-{id}-step{N}-{description}.png`
-Examples: `pim-feature-9-step1-product-list.png`, `pim-feature-9-step2-empty-state.png`
+**Screenshot naming convention:** `feature-{id}-step{N}-{description}.png` (scope is encoded in the directory path `specs/{scope}/screenshots/`)
+Examples: `feature-9-step1-product-list.png`, `feature-9-step2-empty-state.png`
 {END IF}
 
 ### Phase 4: Gitignore Review
@@ -373,15 +378,14 @@ The subagent handles implementation, testing, verification, and committing. The 
 
    This gate MUST be executed for EVERY UI feature. It is the primary quality control for visual output. Skipping this gate means the feature is NOT verified.
 
-   **Determine `{screenshots_dir}`:** The screenshot directory depends on project structure:
-   - **Monorepo** (frontend in a subdirectory like `frontend/`): `{pwd}/frontend/e2e/screenshots`
-   - **Standalone frontend** (frontend at project root): `{pwd}/e2e/screenshots`
-   - Auto-detect: look for `playwright.config.ts` — screenshots live in `e2e/screenshots/` relative to that config file's directory.
+   **Determine `{screenshots_dir}`:** Screenshots are stored per-scope: `{pwd}/specs/{scope}/screenshots/`
+   - Read the active scope from `.active-scope`
+   - Resolve to absolute path: `{pwd}/specs/{scope}/screenshots/`
    - You MUST pass this resolved absolute path as `{screenshots_dir}` when building subagent prompts.
 
    a. **CHECK screenshots exist:**
       ```bash
-      ls {screenshots_dir}/{scope}-feature-{id}-*.png 2>/dev/null | wc -l
+      ls {screenshots_dir}/feature-{id}-*.png 2>/dev/null | wc -l
       ```
    b. **If count is 0: BLOCK.** The feature is NOT complete. Launch a follow-up subagent specifically to capture screenshots:
       ```
@@ -389,9 +393,9 @@ The subagent handles implementation, testing, verification, and committing. The 
       The feature is already implemented and committed. Your ONLY job is:
       1. Start the dev server if not running (check with lsof, start with init.sh if needed)
       2. Write/update a Playwright test that navigates to the feature and captures screenshots
-      3. Screenshots MUST be saved to: {screenshots_dir}/{scope}-feature-{id}-step{N}-{description}.png
+      3. Screenshots MUST be saved to: {screenshots_dir}/feature-{id}-step{N}-{description}.png
       4. Run the test: npx playwright test
-      5. Verify screenshots exist: ls {screenshots_dir}/{scope}-feature-{id}-*.png
+      5. Verify screenshots exist: ls {screenshots_dir}/feature-{id}-*.png
       6. Use the Read tool to visually review each screenshot
       7. Commit the screenshots and test file"
       ```
@@ -443,7 +447,120 @@ The subagent handles implementation, testing, verification, and committing. The 
    - Check edge cases (empty, null, duplicate) are tested
 
 4. If the subagent failed to complete, launch another subagent to fix and finish.
-5. **Loop back IMMEDIATELY** — pick the next incomplete feature and launch a new subagent RIGHT NOW. Do NOT stop, do NOT report to the user, do NOT wait for instructions. KEEP GOING until ALL features pass.
+5. **Launch REFINEMENT SUBAGENT** — See "Refinement Phase" below. This polishes the feature's UX and code quality before moving on.
+6. **Loop back IMMEDIATELY** — pick the next incomplete feature and launch a new subagent RIGHT NOW. Do NOT stop, do NOT report to the user, do NOT wait for instructions. KEEP GOING until ALL features pass.
+
+### Refinement Phase (After Each Feature)
+
+After a feature passes verification and is committed, launch a **refinement subagent** to polish it. This is a separate subagent so it evaluates the feature with fresh context — a "second pair of eyes" pass.
+
+The refinement subagent writes its analysis to `specs/{scope}/refinements/feature-{id}-refinement.md` so the thinking process is traceable across sessions.
+
+**Refinement subagent prompt template:**
+
+```
+You are refining a recently completed feature. The feature is already implemented, tested, verified, and committed. Your job is to polish and improve it — both the user experience and the code quality.
+
+## Project Context
+- Working directory: {pwd}
+- Active scope: {scope}
+- Project type: {type}
+- Feature just completed: #{id} — {description}
+- Screenshots directory: {screenshots_dir}
+- Refinement output: {pwd}/specs/{scope}/refinements/feature-{id}-refinement.md
+
+## Standards Documents
+Read these before starting:
+- {skill_base_dir}/references/core/code-quality.md
+{IF type == "web" or type == "mobile":}
+- {skill_base_dir}/references/web/ux-standards.md
+- {skill_base_dir}/references/web/frontend-design.md
+{END IF}
+
+## What Was Done
+Review the most recent commit to understand what was implemented:
+git log --oneline -1
+git diff HEAD~1 --name-only
+
+{IF type == "web" or type == "mobile":}
+## Part 1: UX/Visual Refinement
+
+Think divergently about how to make users LOVE this interface. Don't just check for bugs — imagine better ways to present the information and interactions.
+
+1. Use the Read tool to review ALL screenshots in {screenshots_dir}/ for this feature
+2. For each screen, evaluate from a first-time user's perspective:
+   - Is the purpose of this screen immediately obvious?
+   - Can the user figure out what to do without instructions?
+   - Does the visual hierarchy guide the eye to the most important action?
+   - Are transitions and state changes smooth and predictable?
+3. Think divergently about improvements — consider alternatives you haven't tried:
+   - Could the layout be reorganized for better flow or scannability?
+   - Would micro-interactions (hover effects, transitions, focus states) make it feel more responsive and alive?
+   - Is whitespace being used effectively to create breathing room and group related elements?
+   - Could typography be more expressive — size contrasts, weight variations, line heights?
+   - Are colors creating the right emotional tone? Could accent colors highlight key actions better?
+   - Are empty states, loading states, and error states not just functional but helpful and encouraging?
+   - Could icons, illustrations, or subtle visual cues improve comprehension?
+4. Research: look at how the standards documents suggest handling similar UI patterns. Are there recommendations you missed?
+5. Implement the most impactful improvements — prioritize changes that make the biggest difference to user understanding and delight
+6. Re-run Playwright tests and re-capture screenshots
+7. Visually verify the improvements look better than before
+{END IF}
+
+## Part 2: Code Quality Refinement
+
+Re-read all generated code with fresh eyes, looking for opportunities to make it more maintainable and testable.
+
+1. Read ALL files changed in the most recent commit: `git diff HEAD~1 --name-only`
+2. For each file, evaluate:
+   - **Abstraction**: Are there functions doing too many things? Should logic be extracted?
+   - **Testability**: Is business logic separated from framework/UI code? Could someone write a unit test for the core logic without setting up the whole framework?
+   - **Readability**: Would a new developer understand this code without extensive context? Are names clear and descriptive?
+   - **Duplication**: Is there repeated logic that should be a shared utility?
+   - **Simplicity**: Are there overly complex control flows that could be simplified? Deep nesting that could be flattened?
+3. Make concrete improvements — refactor, rename, extract, simplify
+4. Run all unit tests — ensure they still pass
+5. If you extracted new logic, write unit tests for it
+
+## Part 3: Write Refinement Report
+
+Write your analysis to `{pwd}/specs/{scope}/refinements/feature-{id}-refinement.md` with this structure:
+
+```markdown
+# Feature #{id} Refinement: {description}
+
+## UX Analysis (web/mobile only)
+- **Screenshots reviewed**: [list of screenshots]
+- **Issues found**: [what problems or opportunities were identified]
+- **Alternatives considered**: [what other approaches were thought about]
+- **Changes made**: [what was actually improved and why]
+- **Changes deferred**: [ideas noted for future consideration, if any]
+
+## Code Quality Analysis
+- **Files reviewed**: [list of files]
+- **Issues found**: [code smells, abstraction opportunities, naming issues]
+- **Refactoring done**: [what was changed and why]
+- **Test coverage**: [new tests added, if any]
+
+## Summary
+[1-2 sentence summary of the refinement pass]
+```
+
+## Commit
+If you made code or UI changes:
+git add -A && git commit -m "refine: polish feature #{id} — [summary of improvements]"
+
+If no code changes were warranted, still commit the refinement report:
+git add specs/{scope}/refinements/ && git commit -m "refine: review feature #{id} — no changes needed"
+
+## Rules
+- This is a POLISH pass — do NOT add new functionality
+- Do NOT break existing tests
+- Keep changes focused on improving what exists
+- Think creatively about UX — the goal is to make users enjoy and understand the interface
+- Think critically about code — the goal is to make the codebase a pleasure to maintain
+- ALWAYS write the refinement report, even if no changes are made
+```
 
 ### Periodic Standards Audit
 
@@ -545,8 +662,8 @@ Before ending:
 
 ### Verification Enforcement (web/mobile projects — NON-NEGOTIABLE)
 - **Interaction tests proving user outcomes are PRIMARY verification** — every UI feature MUST have tests that perform user actions and verify results
-- Every UI feature MUST also have screenshots in `{screenshots_dir}/{scope}-feature-{id}-*.png` — screenshots are SECONDARY for visual quality
-- `{screenshots_dir}` is determined by project structure: `{pwd}/frontend/e2e/screenshots` for monorepos, `{pwd}/e2e/screenshots` for standalone frontends. Auto-detect by finding `playwright.config.ts`.
+- Every UI feature MUST also have screenshots in `{screenshots_dir}/feature-{id}-*.png` — screenshots are SECONDARY for visual quality
+- `{screenshots_dir}` is `{pwd}/specs/{scope}/screenshots/` — screenshots are stored per-scope alongside other scope artifacts.
 - The parent agent MUST check for both interaction tests AND screenshots after EVERY subagent that implements a UI feature
 - If either is missing, the parent MUST launch a follow-up subagent — the feature is NOT done
 - The subagent prompt template includes inlined verification instructions so subagents know what to do without needing to find external docs
@@ -556,11 +673,20 @@ Before ending:
 - NEVER wait for human approval
 - NEVER stop to "report progress" or "check in" — the user can see commits in git log
 - NEVER output a summary and wait — immediately launch the next subagent
-- After each subagent completes: verify → launch next subagent. That's it. No pausing.
+- After each subagent completes: verify → refine → launch next subagent. That's it. No pausing.
 - Make reasonable decisions based on existing patterns
 - If blocked, try alternative approaches before giving up
 - Keep working until ALL features are complete
 - The continue workflow is a LOOP, not a single step. You are the loop controller.
+
+### Refinement Enforcement
+- Every completed feature MUST go through the refinement phase before moving to the next feature
+- The refinement subagent is separate from the implementation subagent — fresh context enables better evaluation
+- Refinement MUST NOT add new functionality — it only improves what exists
+- The refinement report (`specs/{scope}/refinements/feature-{id}-refinement.md`) MUST always be written, even if no code changes are made
+- Refinement commits use the prefix `refine:` not `feat:`
+- For web/mobile: UX refinement should think divergently — not just check for bugs, but imagine better ways to present information
+- For all types: code refinement should focus on abstraction, testability, and maintainability
 
 ---
 

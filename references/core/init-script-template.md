@@ -28,14 +28,14 @@ pkill -f 'node.*dev' 2>/dev/null || true
 sleep 1
 
 # 2. Delete old screenshots for fresh test results
-# Note: screenshot dir is e2e/screenshots/ relative to playwright.config.ts
-# For monorepo (frontend/ subdir): clean frontend/e2e/screenshots/
-# For standalone frontend (root): clean e2e/screenshots/
+# Screenshots are stored per-scope in specs/{scope}/screenshots/
 echo "Cleaning old test artifacts..."
-SCREENSHOT_DIR="e2e/screenshots"  # adjust to "frontend/e2e/screenshots" for monorepos
+SCOPE=$(cat .active-scope 2>/dev/null || echo "default")
+SCREENSHOT_DIR="specs/$SCOPE/screenshots"
 rm -rf "$SCREENSHOT_DIR"/*.png 2>/dev/null || true
 rm -rf test-results 2>/dev/null || true
 mkdir -p "$SCREENSHOT_DIR"
+mkdir -p "specs/$SCOPE/refinements"
 
 # 3. Install/update dependencies
 echo "Installing dependencies..."
@@ -219,8 +219,11 @@ echo "=== Mobile Development Environment ==="
 pkill -f 'metro\|react-native' 2>/dev/null || true
 
 # 2. Clean old artifacts
-rm -rf test-results/ screenshots/ 2>/dev/null || true
-mkdir -p screenshots
+# Screenshots are stored per-scope in specs/{scope}/screenshots/
+SCOPE=$(cat .active-scope 2>/dev/null || echo "default")
+rm -rf "specs/$SCOPE/screenshots"/*.png 2>/dev/null || true
+rm -rf test-results/ 2>/dev/null || true
+mkdir -p "specs/$SCOPE/screenshots" "specs/$SCOPE/refinements"
 
 # 3. Install dependencies
 npm install
