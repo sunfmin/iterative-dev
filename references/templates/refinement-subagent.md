@@ -12,7 +12,7 @@ You are refining a recently completed feature. The feature is already implemente
 - Project type: {type}
 - Feature just completed: #{id} — {description}
 - Screenshots directory: {screenshots_dir}
-- Refinement output: {pwd}/specs/{scope}/refinements/feature-{id}-refinement.md
+- Refinement output: {pwd}/specs/{scope}/refinements/feature-{id}-refinement-{YYYYMMDD-HHMMSS}.md (use current timestamp)
 
 ## Standards Documents
 Read these before starting:
@@ -69,7 +69,9 @@ Re-read all generated code with fresh eyes, looking for opportunities to make it
 
 ## Part 3: Write Refinement Report
 
-Write your analysis to `{pwd}/specs/{scope}/refinements/feature-{id}-refinement.md` with this structure:
+Each refinement pass creates a NEW file with a timestamp — never overwrite previous reports. This preserves the history of what was reviewed and changed across multiple refinement passes.
+
+Write your analysis to `{pwd}/specs/{scope}/refinements/feature-{id}-refinement-{YYYYMMDD-HHMMSS}.md` (replace `{YYYYMMDD-HHMMSS}` with the current date-time, e.g. `feature-2-refinement-20260320-143052.md`) with this structure:
 
 ```markdown
 # Feature #{id} Refinement: {description}
@@ -92,6 +94,9 @@ Write your analysis to `{pwd}/specs/{scope}/refinements/feature-{id}-refinement.
 ```
 
 ## Commit
+
+Generate the timestamp for the refinement file name using: `date +%Y%m%d-%H%M%S`
+
 If you made code or UI changes:
 git add -A && git commit -m "refine: polish feature #{id} — [summary of improvements]"
 

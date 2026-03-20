@@ -130,8 +130,8 @@ Read `references/templates/refinement-subagent.md` for the full prompt template.
 
 **Refinement gate** (parent must verify after subagent completes):
 ```bash
-# Report must exist
-ls specs/{scope}/refinements/feature-{id}-refinement.md
+# At least one refinement report must exist for this feature (each pass creates a new timestamped file)
+ls specs/{scope}/refinements/feature-{id}-refinement-*.md | head -1
 # Commit must exist
 git log --oneline -1 | grep "refine:"
 ```
