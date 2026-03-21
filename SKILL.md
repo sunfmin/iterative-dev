@@ -30,6 +30,19 @@ FOR each feature (highest priority first):
 7. Refinement is non-negotiable — every feature polished for delight, not just function
 8. Standards are auditable — quality lives in reference docs, verified systematically
 
+## Subagent Anti-Patterns (MUST AVOID)
+
+These patterns were found in real sessions and waste significant time:
+
+| Anti-Pattern | Rule |
+|-------------|------|
+| **Retry loops** | If the same tool call fails twice with the same approach, STOP and change strategy. Read error output carefully — don't blindly retry. |
+| **Edit without Read** | If the Edit tool fails (old_string not found), ALWAYS Read the file first to see current content before retrying. Never guess at file contents. |
+| **AskUserQuestion** | NEVER use the `AskUserQuestion` tool. The human may be asleep. Make your best judgment and move on. |
+| **EnterPlanMode / ExitPlanMode** | NEVER enter or exit plan mode during autonomous execution. Just execute directly. |
+| **Blind test reruns** | When a test fails, read the FULL error output, identify the root cause, fix it, THEN rerun. Rerunning without changes is a waste. |
+| **Compile-then-pray** | Always run compilation checks (`tsc --noEmit`, `go build ./...`) BEFORE running tests. Fix compile errors first — they cause cascading test failures. |
+
 ## Project Types
 
 | Type | Verification | Extra Standards |
@@ -107,9 +120,19 @@ Read `references/templates/feature-subagent.md` for the full prompt template. La
 
 After the implementation subagent completes:
 
-a. **Commit gate**: `git log --oneline -1` — confirm `feat:` commit exists
-b. **Feature list gate**: confirm `"passes": true` in feature_list.json
-c. **Type-specific gate**:
+a. **Compile gate** (run BEFORE other gates — catches most subagent mistakes):
+
+| Type | Command |
+|------|---------|
+| web (frontend) | `cd frontend && npx tsc --noEmit` |
+| api / library / cli (Go) | `go build ./...` |
+| api / library / cli (other) | language-appropriate compile/lint check |
+
+If compilation fails, launch a fix subagent immediately — do not proceed to other gates.
+
+b. **Commit gate**: `git log --oneline -1` — confirm `feat:` commit exists
+c. **Feature list gate**: confirm `"passes": true` in feature_list.json
+d. **Type-specific gate**:
 
 | Type | Gate |
 |------|------|
@@ -120,7 +143,7 @@ c. **Type-specific gate**:
 | library | All tests pass including race detection |
 | data | Transformation tests cover edge cases |
 
-d. If any gate fails, launch a fix subagent before proceeding.
+e. If any gate fails, launch a fix subagent before proceeding. Include the FULL error output in the subagent prompt so it can fix the root cause directly.
 
 #### Step 3: REFINE (mandatory — not optional)
 
@@ -168,6 +191,11 @@ Before ending: final standards audit, run all tests, verify `references/core/ses
 | Test is flaky | Fix with proper waits, don't skip |
 | Feature too large | Break into sub-tasks within subagent |
 | Build/dependency error | Read error, fix, rebuild |
+| Same tool fails twice | STOP retrying same approach. Read error output. Try a different strategy. |
+| Edit tool: old_string not found | Read the file first, get exact current content, then retry Edit |
+| Test fails after re-run | Read failure output, fix root cause in code, then re-run. Never re-run without a code change. |
+| TypeScript error after edit | Run `tsc --noEmit` to see all errors, fix them ALL, then re-run tests |
+| Tempted to use AskUserQuestion | NEVER — make your best judgment, the human may be asleep |
 | Port conflict | Kill conflicting process, restart |
 | Feature blocked | Skip to next, come back later |
 | Tempted to skip refinement | NEVER skip — launch it |

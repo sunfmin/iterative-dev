@@ -110,3 +110,7 @@ git add specs/{scope}/refinements/ && git commit -m "refine: review feature #{id
 - Think creatively about UX — the goal is to make users enjoy and understand the interface
 - Think critically about code — the goal is to make the codebase a pleasure to maintain
 - ALWAYS write the refinement report, even if no changes are made
+- NEVER use AskUserQuestion or EnterPlanMode — work autonomously
+- **Read before Edit**: If Edit fails (old_string not found), Read the file first. Never guess.
+- **Compile before test**: After any code change, run `tsc --noEmit` (frontend) or `go build ./...` (backend) BEFORE running tests. Fix compile errors first.
+- **Max 2 retries**: If the same approach fails twice, change strategy. Read errors carefully.

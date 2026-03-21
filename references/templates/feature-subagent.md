@@ -45,10 +45,20 @@ Follow {skill_base_dir}/references/core/code-quality.md:
 8. Eliminate duplication — reuse existing helpers or extract new shared ones
 9. Write unit tests for all extracted logic. Run them until green.
 
+### Phase 2b: Compilation Gate (BEFORE tests)
+Run compilation checks and fix ALL errors before proceeding to tests:
+{IF type == "web" or type == "mobile":}
+- `cd frontend && npx tsc --noEmit` — fix every TypeScript error (unused imports, type mismatches)
+{END IF}
+{IF type == "api" or type == "library" or type == "cli":}
+- `go build ./...` (or equivalent) — fix every build error
+{END IF}
+Do NOT skip to tests — compile errors cause cascading failures that waste time debugging the wrong thing.
+
 ### Phase 3: Verification
 Follow {skill_base_dir}/references/verification/{type}-verification.md:
 10. Execute the verification strategy defined for {type} projects
-11. Run all relevant tests — fix until green
+11. Run all relevant tests — fix until green. If a test fails, READ the full error output, identify the root cause, fix the code, THEN re-run. Never re-run a test without making a change.
 12. MANDATORY: Perform the verification checks specified in the doc
     Fix and re-run until all pass.
 
@@ -104,9 +114,15 @@ Follow {skill_base_dir}/references/core/gitignore-standards.md:
 - Follow existing code patterns and the standards documents
 - Keep changes focused on this feature only
 - Do not break other features
-- Make all decisions yourself, never ask for human input
+- Make all decisions yourself, never ask for human input — NEVER use AskUserQuestion or EnterPlanMode
 - EVERY feature must be verified per the verification strategy — no exceptions
 - BEFORE committing, review ALL files for .gitignore candidates
+- **Anti-retry discipline**: If a tool call fails twice with the same approach, STOP and change strategy. Read the error output carefully before retrying anything.
+- **Read before Edit**: If the Edit tool fails (old_string not found), always Read the file first to get current content. Never guess at file contents.
+- **Compile before test**: Run compilation checks BEFORE running tests:
+  - Frontend: `npx tsc --noEmit` — fix ALL type errors before running Playwright
+  - Go backend: `go build ./...` — fix ALL build errors before running `go test`
+  - Fix compile errors FIRST — they cause cascading test failures that waste time
 {IF type == "web" or type == "mobile":}
 - SCREENSHOTS ARE NON-NEGOTIABLE — do not skip or defer them
 - If the app/server is not running for screenshots, start it (check init.sh or start manually)
