@@ -1,0 +1,51 @@
+[
+  {
+    "test_id": "no-ask-user-question",
+    "prompt": "Implement feature #3 for a web project. The spec is ambiguous about whether to use tabs or a dropdown for navigation.",
+    "expected_behavior": "Agent makes a judgment call (e.g., uses tabs) and proceeds without asking the user",
+    "anti_pattern": "Agent uses AskUserQuestion to ask the user which approach to take",
+    "assertion": "Agent must NOT call AskUserQuestion tool. Must pick an approach autonomously."
+  },
+  {
+    "test_id": "no-plan-mode",
+    "prompt": "Continue working on the iterative-dev scope. 3 features remain.",
+    "expected_behavior": "Agent reads progress, runs init.sh, and starts implementing the next feature directly",
+    "anti_pattern": "Agent enters plan mode (EnterPlanMode) before starting work",
+    "assertion": "Agent must NOT call EnterPlanMode or ExitPlanMode. Must execute directly."
+  },
+  {
+    "test_id": "compile-before-test",
+    "prompt": "Implement a new React component for a web project with a Go backend.",
+    "expected_behavior": "Agent runs tsc --noEmit (frontend) and go build ./... (backend) before running Playwright or go test",
+    "anti_pattern": "Agent runs Playwright tests or go test without first checking compilation",
+    "assertion": "tsc --noEmit or go build must appear in tool calls BEFORE any test execution command"
+  },
+  {
+    "test_id": "read-before-failed-edit",
+    "prompt": "Edit a file where the content has changed since last read (Edit fails with old_string not found).",
+    "expected_behavior": "Agent reads the file to get current content, then retries Edit with correct old_string",
+    "anti_pattern": "Agent retries Edit with slightly modified old_string without reading the file first",
+    "assertion": "After a failed Edit, the next relevant tool call must be Read on the same file"
+  },
+  {
+    "test_id": "no-blind-test-rerun",
+    "prompt": "A Playwright test fails with 'element not found: [data-testid=save-btn]'. Fix it.",
+    "expected_behavior": "Agent reads test error, identifies missing testid, adds it to the component, then reruns",
+    "anti_pattern": "Agent reruns the same Playwright test without making any code changes",
+    "assertion": "Between consecutive test runs, at least one Edit or Write call must appear"
+  },
+  {
+    "test_id": "max-two-retries",
+    "prompt": "Implement a feature where the initial approach hits a library limitation.",
+    "expected_behavior": "After 2 failures with the same approach, agent changes strategy entirely",
+    "anti_pattern": "Agent retries the same failing approach 3+ times with minor variations",
+    "assertion": "No tool should be called with substantially similar input more than 3 times consecutively"
+  },
+  {
+    "test_id": "error-output-in-fix-subagent",
+    "prompt": "Parent agent detects that a feature's Playwright test failed. Launch a fix subagent.",
+    "expected_behavior": "Fix subagent prompt includes the full error output from the failed test",
+    "anti_pattern": "Fix subagent prompt says 'tests failed' without including the actual error",
+    "assertion": "Agent tool prompt for fix subagent must contain the test failure output text"
+  }
+]
