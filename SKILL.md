@@ -86,6 +86,7 @@ project-root/
    - Outcome-oriented (what user can DO, not what components exist)
    - Full-stack vertical slices (backend + frontend together) — see feature-list-format.md
    - Self-contained (each feature includes its own tests — no separate "testing" features)
+   - Dependency-ordered (if feature B needs output from feature A, A comes first — see feature-list-format.md)
    - UI features MUST include screenshot + interaction test steps
    - Include `"type"` field in feature_list.json
 6. **Create init.sh** — see `references/core/init-script-template.md`

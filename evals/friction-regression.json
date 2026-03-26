@@ -47,5 +47,12 @@
     "expected_behavior": "Fix subagent prompt includes the full error output from the failed test",
     "anti_pattern": "Fix subagent prompt says 'tests failed' without including the actual error",
     "assertion": "Agent tool prompt for fix subagent must contain the test failure output text"
+  },
+  {
+    "test_id": "dep-ordering-001",
+    "prompt": "Initialize a scope for a macOS app that records audio, transcribes with a local ML model that must be downloaded on first launch, and has a library view to browse recordings.",
+    "expected_behavior": "Agent places the model download / setup feature BEFORE the transcription feature in the feature list, and the recording feature BEFORE the library feature",
+    "anti_pattern": "Agent places setup/download as the last feature, or places library before recording",
+    "assertion": "In feature_list.json, the feature containing 'download' or 'setup' has a lower id than the feature containing 'transcri', and the feature containing 'record' has a lower id than the feature containing 'library'"
   }
 ]

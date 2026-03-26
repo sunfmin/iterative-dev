@@ -243,6 +243,28 @@ Work on features in this order:
 3. **low** priority last
 4. Within same priority, work in order they appear in the file
 
+## Dependency Ordering (NON-NEGOTIABLE)
+
+Within the same priority level, features MUST be ordered by implementation dependency — if feature B requires output from feature A (downloaded models, permissions, recorded data, UI infrastructure), then A must appear before B in the list.
+
+**Before finalizing the feature list, draw the dependency chain:**
+1. For each feature, ask: "What must already exist for this feature to work?"
+2. Place prerequisites before dependents
+3. If the spec lists a "setup" or "onboarding" feature, it almost always gates other features and should appear early, not last
+
+**Example:** A recording app with transcription and a setup wizard:
+- BAD: scaffolding → recording → transcription → search → setup wizard (model downloads)
+  - Transcription needs the whisper model from the setup wizard!
+- GOOD: scaffolding → setup wizard → recording → transcription → search
+  - Each feature can build on what came before
+
+**Common dependency patterns:**
+- Model downloads / setup wizards → features that use those models
+- Permission grants (camera, microphone, location) → features that need those permissions
+- Data creation (recording, importing, seeding) → features that browse/search/play that data
+- Library/list views → detail/playback views that open from the list
+- Authentication / onboarding → any feature behind auth
+
 ## Best Practices for Test Steps
 
 ### Write Verifiable Steps
